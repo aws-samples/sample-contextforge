@@ -1,0 +1,279 @@
+# OSI v1.0 — ContextForge Energy Outage governed metrics
+#
+# SAIDI and SAIFI are regulator-reported indices. The definitions below follow
+# IEEE 1366. Two things materially change the reported number and are handled
+# explicitly rather than assumed:
+#
+#   1. Planned outages are excluded (is_planned = FALSE).
+#   2. Major Event Days are excluded (exclude_from_indices = FALSE).
+#
+# Getting either wrong produces a number that looks plausible and is wrong, which
+# is exactly the class of error a governed metric layer exists to prevent.
+
+osi_spec_version: "1.0"
+
+datasets:
+  - name: public.outages
+    data_source_id: ds-oms
+    description: "Outage Management System event records"
+    synonyms:
+      - oms_events
+      - interruptions
+
+  - name: public.outage_customers
+    data_source_id: ds-oms
+    description: "Per-outage customer impact with interruption duration"
+
+  - name: public.assets
+    data_source_id: ds-gis
+    description: "GIS network asset inventory with topology"
+    synonyms:
+      - network_assets
+      - equipment
+
+  - name: public.crews
+    data_source_id: ds-wms
+    description: "Crew roster, availability, and assignment state"
+
+  - name: public.obstacles
+    data_source_id: ds-wms
+    description: "Field-reported access obstacles linked to outages and assets"
+
+  - name: public.service_points
+    data_source_id: ds-cis
+    description: "Customer service points, used as the SAIDI/SAIFI denominator"
+
+metrics:
+  - name: saidi_minutes
+    description: >-
+      System Average Interruption Duration Index, in customer-minutes per customer
+      served. Excludes planned outages and Major Event Days per IEEE 1366.
+    expression:
+      dialects:
+        - dialect: ANSI_SQL
+          expression: >-
+            SUM(interruption_minutes) FILTER (WHERE is_planned = FALSE
+            AND exclude_from_indices = FALSE)
+            / NULLIF(COUNT(DISTINCT total_customers_served), 0)
+        - dialect: SNOWFLAKE
+          expression: >-
+            SUM(IFF(is_planned = FALSE AND exclude_from_indices = FALSE,
+            interruption_minutes, 0))
+            / NULLIF(COUNT(DISTINCT total_customers_served), 0)
+    ai_context:
+      synonyms:
+        - "SAIDI"
+        - "average outage duration"
+        - "customer minutes interrupted"
+      instructions: >-
+        Use for reliability reporting questions. Always state the exclusions
+        (planned outages, Major Event Days) when reporting this, because an
+        unqualified SAIDI figure is not comparable across utilities or periods.
+      examples:
+        - "What's our SAIDI this year?"
+        - "How does our reliability compare to last quarter?"
+    x_coa:
+      data_source_id: ds-oms
+      source_table: public.outage_customers
+      unit: minutes
+      return_type: decimal
+      time_dimension: outage_start
+      ontology_concepts:
+        - Outage
+        - Customer
+
+  - name: saifi_count
+    description: >-
+      System Average Interruption Frequency Index: sustained interruptions per
+      customer served. Excludes planned outages and Major Event Days.
+    expression:
+      dialects:
+        - dialect: ANSI_SQL
+          expression: >-
+            COUNT(*) FILTER (WHERE is_planned = FALSE AND exclude_from_indices = FALSE
+            AND interruption_minutes >= 5)
+            / NULLIF(COUNT(DISTINCT total_customers_served), 0)
+        - dialect: SNOWFLAKE
+          expression: >-
+            COUNT_IF(is_planned = FALSE AND exclude_from_indices = FALSE
+            AND interruption_minutes >= 5)
+            / NULLIF(COUNT(DISTINCT total_customers_served), 0)
+    ai_context:
+      synonyms:
+        - "SAIFI"
+        - "outage frequency"
+        - "interruptions per customer"
+      instructions: >-
+        The 5-minute floor is the IEEE 1366 definition of a sustained
+        interruption; anything shorter is a momentary and counts toward MAIFI
+        instead. Mention this if the user asks why brief blips are missing.
+      examples:
+        - "What's our SAIFI?"
+        - "How often does the average customer lose power?"
+    x_coa:
+      data_source_id: ds-oms
+      source_table: public.outage_customers
+      return_type: decimal
+      time_dimension: outage_start
+      ontology_concepts:
+        - Outage
+        - Customer
+
+  - name: eta_accuracy_pct
+    description: >-
+      Share of restored outages where actual restoration landed within 30 minutes
+      of the most recent published estimate.
+    expression:
+      dialects:
+        - dialect: ANSI_SQL
+          expression: >-
+            100.0 * COUNT(*) FILTER (WHERE outage_end IS NOT NULL
+            AND ABS(EXTRACT(EPOCH FROM (outage_end - estimated_restoration)) / 60) <= 30)
+            / NULLIF(COUNT(*) FILTER (WHERE outage_end IS NOT NULL), 0)
+        - dialect: DATABRICKS
+          expression: >-
+            100.0 * COUNT(CASE WHEN outage_end IS NOT NULL
+            AND ABS(UNIX_TIMESTAMP(outage_end) - UNIX_TIMESTAMP(estimated_restoration)) / 60 <= 30
+            THEN 1 END)
+            / NULLIF(COUNT(CASE WHEN outage_end IS NOT NULL THEN 1 END), 0)
+    ai_context:
+      synonyms:
+        - "ETA accuracy"
+        - "ETR accuracy"
+        - "estimate reliability"
+      instructions: >-
+        The customer-trust metric. Compares against the LATEST published estimate,
+        not the first — pair with eta_revision_rate to show whether accuracy was
+        achieved by revising the estimate repeatedly.
+      examples:
+        - "How accurate are our restoration estimates?"
+        - "Do we hit our published ETAs?"
+    x_coa:
+      data_source_id: ds-oms
+      source_table: public.outages
+      unit: percent
+      return_type: decimal
+      time_dimension: outage_start
+      ontology_concepts:
+        - Outage
+
+  - name: eta_revision_rate
+    description: >-
+      Average number of times the published restoration estimate was revised per
+      outage. High values erode customer trust even when final accuracy is good.
+    expression:
+      dialects:
+        - dialect: ANSI_SQL
+          expression: "AVG(eta_revision_count)"
+    ai_context:
+      synonyms:
+        - "ETA revisions"
+        - "estimate churn"
+      instructions: >-
+        Read alongside eta_accuracy_pct. Good accuracy with a high revision rate
+        means estimates were chased rather than predicted.
+      examples:
+        - "How often do we change the restoration time?"
+    x_coa:
+      data_source_id: ds-oms
+      source_table: public.outages
+      return_type: decimal
+      ontology_concepts:
+        - Outage
+
+  - name: crew_utilization_pct
+    description: >-
+      Share of on-shift crews currently assigned to an active outage.
+    expression:
+      dialects:
+        - dialect: ANSI_SQL
+          expression: >-
+            100.0 * COUNT(*) FILTER (WHERE assigned_outage_id IS NOT NULL)
+            / NULLIF(COUNT(*) FILTER (WHERE on_shift = TRUE), 0)
+        - dialect: SNOWFLAKE
+          expression: >-
+            100.0 * COUNT_IF(assigned_outage_id IS NOT NULL)
+            / NULLIF(COUNT_IF(on_shift = TRUE), 0)
+    ai_context:
+      synonyms:
+        - "crew utilization"
+        - "crew availability"
+        - "dispatch load"
+      instructions: >-
+        Use for storm-response and resource questions. Values at or near 100 mean
+        no reserve capacity, which is the operationally interesting condition.
+      examples:
+        - "How many crews are free right now?"
+        - "Are we at capacity on crews?"
+    x_coa:
+      data_source_id: ds-wms
+      source_table: public.crews
+      unit: percent
+      return_type: decimal
+      ontology_concepts:
+        - Crew
+        - Outage
+
+  - name: obstacle_delay_minutes
+    description: >-
+      Average minutes an access obstacle remained unresolved on outages where one
+      was reported. Isolates access delay from repair time.
+    expression:
+      dialects:
+        - dialect: ANSI_SQL
+          expression: >-
+            AVG(EXTRACT(EPOCH FROM (obstacle_cleared_at - obstacle_reported_at)) / 60)
+            FILTER (WHERE obstacle_cleared_at IS NOT NULL)
+        - dialect: DATABRICKS
+          expression: >-
+            AVG(CASE WHEN obstacle_cleared_at IS NOT NULL
+            THEN (UNIX_TIMESTAMP(obstacle_cleared_at) - UNIX_TIMESTAMP(obstacle_reported_at)) / 60 END)
+    ai_context:
+      synonyms:
+        - "access delay"
+        - "obstacle clearing time"
+        - "blocked access duration"
+      instructions: >-
+        Answers why restoration took longer than the repair itself would suggest.
+        Break down by obstacle_type when the user asks what is slowing crews down.
+      examples:
+        - "What's slowing our crews down?"
+        - "How long do flooded-access outages take to clear?"
+    x_coa:
+      data_source_id: ds-wms
+      source_table: public.obstacles
+      unit: minutes
+      return_type: decimal
+      time_dimension: obstacle_reported_at
+      ontology_concepts:
+        - Obstacle
+        - Outage
+
+  - name: critical_customers_affected
+    description: >-
+      Count of distinct medical-baseline and critical-facility customers currently
+      without service.
+    expression:
+      dialects:
+        - dialect: ANSI_SQL
+          expression: >-
+            COUNT(DISTINCT CASE WHEN (medical_baseline = TRUE OR critical_facility = TRUE)
+            AND restored_at IS NULL THEN service_point_id END)
+    ai_context:
+      synonyms:
+        - "critical customers"
+        - "medical baseline customers"
+        - "priority customers"
+      instructions: >-
+        Restoration-prioritisation metric. Any non-zero value warrants naming the
+        affected facility types, not just the count.
+      examples:
+        - "Are any hospitals without power?"
+        - "How many medical-baseline customers are out?"
+    x_coa:
+      data_source_id: ds-oms
+      source_table: public.outage_customers
+      return_type: integer
+      ontology_concepts:
+        - CriticalCustomer
+        - Outage

@@ -1,0 +1,39 @@
+[
+  { "id": "apt29", "label": "Midnight Blizzard (APT29)", "type": "ThreatActor", "properties": { "aliases": ["CozyBear", "NOBELIUM", "UNC2452"], "origin": "Russia", "motivation": "Espionage", "sophistication": "Advanced", "active_since": "2008", "sectors_targeted": ["Government", "Technology", "Energy"] } },
+  { "id": "vt", "label": "Volt Typhoon", "type": "ThreatActor", "properties": { "aliases": ["BRONZE SILHOUETTE", "Vanguard Panda"], "origin": "China", "motivation": "Pre-positioning", "sophistication": "Advanced", "active_since": "2021", "sectors_targeted": ["Energy", "Telecom", "Water"] } },
+  { "id": "sc", "label": "Scattered Spider", "type": "ThreatActor", "properties": { "aliases": ["UNC3944", "0ktapus"], "origin": "US/UK", "motivation": "Financial", "sophistication": "Intermediate", "active_since": "2022", "sectors_targeted": ["Telecom", "Finance", "Technology"] } },
+  { "id": "lazarus", "label": "Lazarus Group", "type": "ThreatActor", "properties": { "aliases": ["APT38", "Hidden Cobra"], "origin": "North Korea", "motivation": "Financial/Espionage", "sophistication": "Advanced", "active_since": "2009", "sectors_targeted": ["Finance", "Crypto", "Defense"] } },
+
+  { "id": "cve-2020-10148", "label": "CVE-2020-10148", "type": "CVE", "properties": { "cvss": 9.8, "description": "SolarWinds Orion API authentication bypass", "affected_product": "SolarWinds Orion", "patch_status": "Available", "published": "2020-12-29", "cwe": "CWE-287" } },
+  { "id": "cve-2021-44228", "label": "CVE-2021-44228", "type": "CVE", "properties": { "cvss": 10.0, "description": "Apache Log4j2 JNDI RCE (Log4Shell)", "affected_product": "Apache Log4j 2.x < 2.17.1", "patch_status": "Available", "published": "2021-12-10", "cwe": "CWE-502" } },
+  { "id": "cve-2023-34362", "label": "CVE-2023-34362", "type": "CVE", "properties": { "cvss": 9.8, "description": "MOVEit Transfer SQL injection", "affected_product": "Progress MOVEit Transfer", "patch_status": "Available", "published": "2023-06-02", "cwe": "CWE-89" } },
+  { "id": "cve-2024-3400", "label": "CVE-2024-3400", "type": "CVE", "properties": { "cvss": 10.0, "description": "Palo Alto PAN-OS command injection", "affected_product": "PAN-OS GlobalProtect", "patch_status": "Available", "published": "2024-04-12", "cwe": "CWE-77" } },
+  { "id": "cve-2023-23397", "label": "CVE-2023-23397", "type": "CVE", "properties": { "cvss": 9.8, "description": "Microsoft Outlook NTLM relay EoP", "affected_product": "Microsoft Outlook", "patch_status": "Available", "published": "2023-03-14", "cwe": "CWE-294" } },
+
+  { "id": "t1195-002", "label": "T1195.002", "type": "Technique", "properties": { "name": "Supply Chain Compromise: Software", "tactic": "Initial Access", "detection": "Monitor software update processes, validate signatures" } },
+  { "id": "t1546-003", "label": "T1546.003", "type": "Technique", "properties": { "name": "Event Triggered Execution: WMI", "tactic": "Persistence", "detection": "WMI subscription monitoring" } },
+  { "id": "t1071-001", "label": "T1071.001", "type": "Technique", "properties": { "name": "Application Layer Protocol: HTTP", "tactic": "Command and Control", "detection": "HTTP traffic analysis, beacon detection" } },
+  { "id": "t1190", "label": "T1190", "type": "Technique", "properties": { "name": "Exploit Public-Facing Application", "tactic": "Initial Access", "detection": "WAF, IDS/IPS, application logging" } },
+  { "id": "t1059-001", "label": "T1059.001", "type": "Technique", "properties": { "name": "PowerShell", "tactic": "Execution", "detection": "Script block logging, AMSI" } },
+  { "id": "t1566-004", "label": "T1566.004", "type": "Technique", "properties": { "name": "Spearphishing Voice", "tactic": "Initial Access", "detection": "User awareness training, callback verification" } },
+  { "id": "t1550-001", "label": "T1550.001", "type": "Technique", "properties": { "name": "Use Alternate Auth: Application Access Token", "tactic": "Defense Evasion", "detection": "Token usage anomalies" } },
+  { "id": "t1567-002", "label": "T1567.002", "type": "Technique", "properties": { "name": "Exfiltration to Cloud Storage", "tactic": "Exfiltration", "detection": "DLP, cloud API monitoring" } },
+  { "id": "t1078", "label": "T1078", "type": "Technique", "properties": { "name": "Valid Accounts", "tactic": "Defense Evasion", "detection": "Impossible travel, behavioral analytics" } },
+
+  { "id": "sunburst", "label": "SUNBURST", "type": "Malware", "properties": { "family": "Backdoor", "capabilities": ["C2", "Reconnaissance", "Data exfiltration"], "c2_protocol": "HTTP (DNS for staging)", "discovered": "2020-12" } },
+  { "id": "cobaltstrike", "label": "Cobalt Strike", "type": "Malware", "properties": { "family": "Post-exploitation framework", "capabilities": ["Lateral movement", "Credential theft", "C2"], "c2_protocol": "HTTPS/DNS/SMB", "discovered": "2012" } },
+  { "id": "cl0p-ransomware", "label": "Cl0p Ransomware", "type": "Malware", "properties": { "family": "Ransomware", "capabilities": ["Encryption", "Data theft", "Extortion"], "c2_protocol": "TOR", "discovered": "2019" } },
+
+  { "id": "solarwinds-campaign", "label": "SolarWinds Campaign", "type": "Campaign", "properties": { "start_date": "2020-03", "end_date": "2020-12", "victims_count": 18000, "sectors": ["Government", "Technology", "Defense"] } },
+  { "id": "log4shell-campaign", "label": "Log4Shell Exploitation Wave", "type": "Campaign", "properties": { "start_date": "2021-12-10", "end_date": "2022-03", "victims_count": "Millions", "sectors": ["All"] } },
+  { "id": "moveit-campaign", "label": "MOVEit Mass Exploitation", "type": "Campaign", "properties": { "start_date": "2023-05-27", "end_date": "2023-08", "victims_count": 2700, "sectors": ["Finance", "Healthcare", "Government"] } },
+
+  { "id": "asset-log4j", "label": "log4j-core:2.14.1", "type": "Asset", "properties": { "product": "Apache Log4j", "version": "2.14.1", "owner_team": "Platform Engineering", "used_by": ["payment-service", "auth-gateway"] } },
+  { "id": "asset-spring", "label": "spring-boot:2.6.1", "type": "Asset", "properties": { "product": "Spring Boot", "version": "2.6.1", "owner_team": "Backend Team", "used_by": ["order-api", "notification-service"] } },
+  { "id": "asset-moveit", "label": "MOVEit Transfer 2023.0", "type": "Asset", "properties": { "product": "Progress MOVEit Transfer", "version": "2023.0.2", "owner_team": "IT Operations", "used_by": ["file-exchange", "partner-data"] } },
+  { "id": "asset-outlook", "label": "Microsoft Outlook 365", "type": "Asset", "properties": { "product": "Microsoft Outlook", "version": "365 (16.0)", "owner_team": "All Employees", "used_by": ["enterprise-wide"] } },
+
+  { "id": "ioc-1", "label": "avsvmcloud[.]com", "type": "Indicator", "properties": { "ioc_type": "Domain", "confidence": 99, "first_seen": "2020-12-13", "context": "SUNBURST C2 domain" } },
+  { "id": "ioc-2", "label": "185.220.101.0/24", "type": "Indicator", "properties": { "ioc_type": "IP Range", "confidence": 85, "first_seen": "2023-06-01", "context": "Cl0p exfil infrastructure" } },
+  { "id": "ioc-3", "label": "SHA256:e17db...f4a2", "type": "Indicator", "properties": { "ioc_type": "File Hash", "confidence": 100, "first_seen": "2020-12-13", "context": "SUNBURST trojanized DLL" } }
+]

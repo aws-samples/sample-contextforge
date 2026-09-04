@@ -1,0 +1,75 @@
+# Source registration templates for the OT Security pack.
+#
+# COA supports exactly three source shapes — GLUE_DATABASE, JDBC_DATABASE, and
+# DOCUMENTS — and has no plugin model. Anything else (OPC-UA, GRC APIs, REST
+# feeds) must land data into one of these first. See connectors/ for that.
+#
+# Placeholders in ${...} form must be substituted before install. The loader does
+# not template these: registering a source is not idempotent (each call mints a
+# new sourceId), so this file is intentionally inert until you fill it in and
+# uncomment the entry you want.
+#
+# Expected table shapes for the metrics in metrics.osi.yaml:
+#
+#   public.ot_assets(asset_id, asset_tag, vendor, model, firmware_version,
+#                    purdue_level, safety_critical, last_patched)
+#   public.vulnerabilities(cve_id, cvss_score, exploited_in_wild,
+#                          patch_available, patch_available_date)
+#   public.asset_vulnerabilities(asset_id, cve_id, patch_applied,
+#                                patch_available_date, cvss_score,
+#                                exploited_in_wild, purdue_level)
+#   public.asset_connectivity(source_asset_id, target_asset_id,
+#                             source_purdue_level, safety_critical)
+#   public.compliance_controls(control_id, framework, asset_id, in_scope,
+#                              evidence_status)
+
+sources: []
+
+# ── Example: OT inventory in PostgreSQL ───────────────────────────────────────
+# Uncomment and fill in. credentialSecretArn must be a Secrets Manager ARN
+# containing {"username": "...", "password": "..."} — COA validates the ARN
+# shape strictly and rejects a well-formed ARN for the wrong service.
+#
+# sources:
+#   - sourceType: DATABASE
+#     databaseSource:
+#       name: ot-inventory
+#       metadataEnrichmentEnabled: true
+#       jdbcConfiguration:
+#         engine: POSTGRESQL
+#         host: ${OT_DB_HOST}
+#         port: 5432
+#         databaseName: ot_inventory
+#         credentialSecretArn: ${OT_DB_SECRET_ARN}
+#         schemaFilter:
+#           - public
+#         tableFilter:
+#           - ot_assets
+#           - vulnerabilities
+#           - asset_vulnerabilities
+#           - asset_connectivity
+#           - compliance_controls
+
+# ── Example: threat advisories as documents ───────────────────────────────────
+# Point this at the bucket the connectors in connectors/ write to.
+#
+#   - sourceType: DOCUMENTS
+#     documentSource:
+#       name: ot-threat-advisories
+#       sourceBucketArn: ${ADVISORY_BUCKET_ARN}
+#       s3Prefixes:
+#         - feeds/cisa-kev/
+#         - feeds/mitre-attack-ics/
+#         - advisories/dragos/
+
+# ── Example: Glue-catalogued lake tables ──────────────────────────────────────
+# The database must already be queryable in Athena at onboard time; COA does not
+# create the catalog for you.
+#
+#   - sourceType: DATABASE
+#     databaseSource:
+#       name: ot-telemetry-lake
+#       glueConfiguration:
+#         catalogId: ${AWS_ACCOUNT_ID}
+#         region: us-east-1
+#         databaseName: ot_telemetry

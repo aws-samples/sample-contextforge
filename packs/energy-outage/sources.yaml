@@ -1,0 +1,75 @@
+# Source registration templates for the Energy Outage pack.
+#
+# Utility data is typically spread across four systems, which is why the metrics
+# reference four data_source_ids. Register each separately so COA can scope
+# per-source grants:
+#
+#   ds-oms  Outage Management System   outages, per-customer impact
+#   ds-gis  GIS / network model        assets and topology
+#   ds-wms  Work Management System     crews, work orders, obstacles
+#   ds-cis  Customer Information Sys.  service points (SAIDI/SAIFI denominator)
+#
+# Inert until filled in — source registration is not idempotent, so the loader
+# will not invent these for you.
+#
+# Expected table shapes for metrics.osi.yaml:
+#
+#   public.outages(outage_id, outage_start, outage_end, estimated_restoration,
+#                  eta_revision_count, customers_affected, is_planned,
+#                  exclude_from_indices, confirmed, root_cause_id, asset_id)
+#   public.outage_customers(outage_id, service_point_id, interruption_minutes,
+#                          is_planned, exclude_from_indices, total_customers_served,
+#                          medical_baseline, critical_facility, restored_at,
+#                          outage_start)
+#   public.assets(asset_id, asset_type, voltage_level, feeds_asset_id,
+#                 territory_id, switch_state)
+#   public.crews(crew_id, crew_size, on_shift, assigned_outage_id)
+#   public.obstacles(obstacle_id, outage_id, asset_id, obstacle_type,
+#                    obstacle_reported_at, obstacle_cleared_at)
+#   public.service_points(service_point_id, meter_number, territory_id,
+#                         medical_baseline, critical_facility)
+
+sources: []
+
+# ── Example: OMS + CIS in PostgreSQL ──────────────────────────────────────────
+#
+# sources:
+#   - sourceType: DATABASE
+#     databaseSource:
+#       name: oms
+#       metadataEnrichmentEnabled: true
+#       jdbcConfiguration:
+#         engine: POSTGRESQL
+#         host: ${OMS_DB_HOST}
+#         port: 5432
+#         databaseName: oms
+#         credentialSecretArn: ${OMS_DB_SECRET_ARN}
+#         schemaFilter:
+#           - public
+#         tableFilter:
+#           - outages
+#           - outage_customers
+#
+# ── Example: GIS network model in Redshift ────────────────────────────────────
+#
+#   - sourceType: DATABASE
+#     databaseSource:
+#       name: gis
+#       jdbcConfiguration:
+#         engine: REDSHIFT
+#         host: ${GIS_CLUSTER_ENDPOINT}
+#         port: 5439
+#         databaseName: gis
+#         credentialSecretArn: ${GIS_DB_SECRET_ARN}
+#         tableFilter:
+#           - assets
+#
+# ── Example: storm reports and damage assessments as documents ────────────────
+#
+#   - sourceType: DOCUMENTS
+#     documentSource:
+#       name: storm-reports
+#       sourceBucketArn: ${STORM_REPORT_BUCKET_ARN}
+#       s3Prefixes:
+#         - damage-assessments/
+#         - drone-imagery-reports/

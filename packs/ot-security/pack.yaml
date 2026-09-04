@@ -1,0 +1,25 @@
+name: OT Security Intelligence
+version: 1.0.0
+description: >-
+  Operational-technology security context: threat groups, ICS techniques,
+  vulnerabilities, Purdue-zoned assets, and compliance controls. Answers
+  reachability and blast-radius questions by reasoning over asset connectivity.
+
+# Suggested namespace. Override with --namespace at install time.
+default_namespace: otsec
+
+ontology: ontology.ttl
+ontology_title: ContextForge OT Security Ontology
+# foundational | induced | user_created
+# user_created is correct here: this ontology is hand-authored, not induced from
+# a data scan, and it is not one of COA's shipped foundational ontologies.
+ontology_type: user_created
+
+metrics: metrics.osi.yaml
+sources: sources.yaml
+
+# Grants applied after install. principalType: USER | GROUP | AGENT.
+# Roles are read-only in COA's API — these must be names that already exist
+# (namespace_owner, namespace_maintainer, namespace_data_steward,
+#  namespace_data_analyst). You cannot create a role via the API.
+grants: []

@@ -1,0 +1,229 @@
+# OSI v1.0 — ContextForge OT Security governed metrics
+#
+# Imported via POST /namespaces/{ns}/import-osi. Expressions assume the table
+# shapes described in sources.yaml; adjust source_table per deployment.
+#
+# ai_context is a structured object per the OSI spec, not a free-text string.
+# COA's osi_parser rejects a string here.
+
+osi_spec_version: "1.0"
+
+datasets:
+  - name: public.ot_assets
+    data_source_id: ds-ot-inventory
+    description: "OT asset inventory: PLCs, HMIs, historians, network devices"
+    synonyms:
+      - asset_inventory
+      - ics_assets
+
+  - name: public.vulnerabilities
+    data_source_id: ds-ot-inventory
+    description: "CVE records enriched with CISA KEV and vendor patch status"
+    synonyms:
+      - cves
+      - vulns
+
+  - name: public.asset_vulnerabilities
+    data_source_id: ds-ot-inventory
+    description: "Join table mapping assets to the vulnerabilities affecting them"
+
+  - name: public.asset_connectivity
+    data_source_id: ds-ot-inventory
+    description: "Directed network reachability edges between OT assets"
+    synonyms:
+      - reachability
+      - network_edges
+
+  - name: public.compliance_controls
+    data_source_id: ds-ot-inventory
+    description: "NERC CIP / IEC 62443 controls and per-asset evidence status"
+
+metrics:
+  - name: blast_radius_score
+    description: >-
+      Count of distinct OT assets reachable from a given entry-point asset,
+      following directed network connectivity. The headline OT Security metric.
+    expression:
+      dialects:
+        - dialect: ANSI_SQL
+          expression: "COUNT(DISTINCT target_asset_id)"
+        - dialect: SNOWFLAKE
+          expression: "COUNT(DISTINCT target_asset_id)"
+    ai_context:
+      synonyms:
+        - "blast radius"
+        - "reachable asset count"
+        - "lateral movement scope"
+      instructions: >-
+        Use when asked what an attacker could reach from a compromised asset.
+        Requires an entry-point asset. Prefer the ontology's transitive canReach
+        relation over this SQL metric when the question is about multi-hop paths:
+        the SQL form counts rows in the precomputed reachability table, while
+        canReach reasons over asserted direct connectivity.
+      examples:
+        - "What's the blast radius if VOLTZITE compromises our VPN?"
+        - "How many assets can be reached from the engineering workstation?"
+    x_coa:
+      data_source_id: ds-ot-inventory
+      source_table: public.asset_connectivity
+      return_type: integer
+      ontology_concepts:
+        - OTAsset
+        - canReach
+
+  - name: safety_critical_exposure
+    description: >-
+      Count of safety-critical assets (SIS and Level 0/1 controllers) reachable
+      from any asset in Purdue Level 4 or above. Measures IT-to-safety exposure.
+    expression:
+      dialects:
+        - dialect: ANSI_SQL
+          expression: >-
+            COUNT(DISTINCT CASE WHEN safety_critical = TRUE AND source_purdue_level >= 4
+            THEN target_asset_id END)
+    ai_context:
+      synonyms:
+        - "safety exposure"
+        - "IT to OT exposure"
+        - "SIS reachability"
+      instructions: >-
+        Use for questions about whether enterprise-network compromise could reach
+        safety systems. A non-zero value is a finding, not a statistic.
+      examples:
+        - "Can anything on the corporate network reach a safety system?"
+        - "How exposed are our safety instrumented systems?"
+    x_coa:
+      data_source_id: ds-ot-inventory
+      source_table: public.asset_connectivity
+      return_type: integer
+      ontology_concepts:
+        - SafetyInstrumentedSystem
+        - PurdueZone
+        - canReach
+
+  - name: compliance_gap_count
+    description: >-
+      Number of in-scope compliance controls with no passing evidence on record
+      for the assets they apply to.
+    expression:
+      dialects:
+        - dialect: ANSI_SQL
+          expression: >-
+            COUNT(*) FILTER (WHERE in_scope = TRUE
+            AND (evidence_status IS NULL OR evidence_status <> 'PASS'))
+        - dialect: SNOWFLAKE
+          expression: >-
+            COUNT_IF(in_scope = TRUE
+            AND (evidence_status IS NULL OR evidence_status <> 'PASS'))
+    ai_context:
+      synonyms:
+        - "compliance gaps"
+        - "open findings"
+        - "control failures"
+      instructions: >-
+        Use for audit-readiness questions. Break down by framework when the user
+        names one (NERC CIP, IEC 62443).
+      examples:
+        - "How many NERC CIP gaps do we have?"
+        - "Are we audit-ready?"
+    x_coa:
+      data_source_id: ds-ot-inventory
+      source_table: public.compliance_controls
+      return_type: integer
+      ontology_concepts:
+        - ComplianceControl
+        - OTAsset
+
+  - name: patch_overdue_days
+    description: >-
+      Average days elapsed since a patch became available for a vulnerability
+      that is still unpatched on at least one affected asset.
+    expression:
+      dialects:
+        - dialect: ANSI_SQL
+          expression: >-
+            AVG(EXTRACT(DAY FROM (CURRENT_DATE - patch_available_date)))
+            FILTER (WHERE patch_applied = FALSE AND patch_available_date IS NOT NULL)
+        - dialect: DATABRICKS
+          expression: >-
+            AVG(CASE WHEN patch_applied = FALSE AND patch_available_date IS NOT NULL
+            THEN DATEDIFF(CURRENT_DATE, patch_available_date) END)
+    ai_context:
+      synonyms:
+        - "patch latency"
+        - "patch debt"
+        - "days unpatched"
+      instructions: >-
+        Use for patch-management and remediation-velocity questions. In OT,
+        long values are often intentional due to maintenance windows — report the
+        number without implying negligence.
+      examples:
+        - "How far behind are we on patching?"
+        - "What's our average patch delay?"
+    x_coa:
+      data_source_id: ds-ot-inventory
+      source_table: public.asset_vulnerabilities
+      unit: days
+      return_type: decimal
+      time_dimension: patch_available_date
+      ontology_concepts:
+        - Vulnerability
+        - OTAsset
+
+  - name: kev_exposure_count
+    description: >-
+      Count of distinct assets affected by at least one vulnerability listed in
+      CISA's Known Exploited Vulnerabilities catalog.
+    expression:
+      dialects:
+        - dialect: ANSI_SQL
+          expression: "COUNT(DISTINCT CASE WHEN exploited_in_wild = TRUE THEN asset_id END)"
+    ai_context:
+      synonyms:
+        - "KEV exposure"
+        - "actively exploited"
+        - "known exploited vulnerabilities"
+      instructions: >-
+        Use when the user asks about vulnerabilities that are actually being
+        exploited, as opposed to theoretical risk. Higher priority than raw CVSS.
+      examples:
+        - "Which assets have actively exploited vulnerabilities?"
+        - "What's our KEV exposure?"
+    x_coa:
+      data_source_id: ds-ot-inventory
+      source_table: public.asset_vulnerabilities
+      return_type: integer
+      ontology_concepts:
+        - Vulnerability
+        - OTAsset
+
+  - name: unpatched_critical_vulns
+    description: >-
+      Count of unpatched vulnerabilities with a CVSS base score of 9.0 or higher
+      on assets in Purdue Level 3 or below.
+    expression:
+      dialects:
+        - dialect: ANSI_SQL
+          expression: >-
+            COUNT(*) FILTER (WHERE cvss_score >= 9.0
+            AND patch_applied = FALSE AND purdue_level <= 3)
+        - dialect: SNOWFLAKE
+          expression: >-
+            COUNT_IF(cvss_score >= 9.0
+            AND patch_applied = FALSE AND purdue_level <= 3)
+    ai_context:
+      synonyms:
+        - "critical vulnerabilities"
+        - "critical unpatched"
+      instructions: >-
+        Scoped to Level 3 and below because control-network exposure matters more
+        than enterprise exposure in an OT risk conversation.
+      examples:
+        - "How many critical vulnerabilities are unpatched in the control network?"
+    x_coa:
+      data_source_id: ds-ot-inventory
+      source_table: public.asset_vulnerabilities
+      return_type: integer
+      ontology_concepts:
+        - Vulnerability
+        - PurdueZone

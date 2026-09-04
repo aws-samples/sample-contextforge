@@ -1,0 +1,347 @@
+@prefix mfg:  <https://contextforge.io/ontology/manufacturing#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+# ── Ontology declaration ──────────────────────────────────────────────────────
+
+<https://contextforge.io/ontology/manufacturing>
+    a owl:Ontology ;
+    dcterms:title "ContextForge Manufacturing Supply Chain Ontology" ;
+    dcterms:description """Discrete-manufacturing quality and supply chain domain
+        model: suppliers, incoming lots, production batches, finished products,
+        machines, specifications, and defects. Genealogy is modelled with a
+        transitive `derivedFrom` relation over a common TraceableUnit class, so
+        upstream defect attribution — which supplier lot caused a field failure —
+        follows from asserted parent-child links rather than a recursive query.""" ;
+    owl:versionInfo "1.0.0" .
+
+# ── Traceability spine ────────────────────────────────────────────────────────
+# A single superclass lets genealogy be one transitive relation instead of a
+# different join per level (lot -> batch -> subassembly -> product).
+
+mfg:TraceableUnit a owl:Class ;
+    rdfs:label "Traceable Unit" ;
+    rdfs:comment """Anything with a traceable identity in the production record:
+        an incoming supplier lot, an in-process batch, a subassembly, or a
+        finished product.""" ;
+    skos:altLabel "traceable item", "genealogy node" .
+
+mfg:SupplierLot a owl:Class ;
+    rdfs:subClassOf mfg:TraceableUnit ;
+    rdfs:label "Supplier Lot" ;
+    rdfs:comment "A received quantity of material from one supplier under one lot code." ;
+    skos:altLabel "incoming lot", "raw material lot" .
+
+mfg:Component a owl:Class ;
+    rdfs:subClassOf mfg:TraceableUnit ;
+    rdfs:label "Component" ;
+    rdfs:comment "A part consumed in assembly." ;
+    skos:altLabel "part", "SKU" .
+
+mfg:Batch a owl:Class ;
+    rdfs:subClassOf mfg:TraceableUnit ;
+    rdfs:label "Production Batch" ;
+    rdfs:comment "A quantity produced in one run on one machine." ;
+    skos:altLabel "production run", "work order batch", "lot" .
+
+mfg:Subassembly a owl:Class ;
+    rdfs:subClassOf mfg:TraceableUnit ;
+    rdfs:label "Subassembly" .
+
+mfg:Product a owl:Class ;
+    rdfs:subClassOf mfg:TraceableUnit ;
+    rdfs:label "Finished Product" ;
+    skos:altLabel "finished good", "end item" .
+
+# ── Supply and production ─────────────────────────────────────────────────────
+
+mfg:Supplier a owl:Class ;
+    rdfs:label "Supplier" ;
+    rdfs:comment "An external source of material or components." ;
+    skos:altLabel "vendor", "source" .
+
+mfg:Machine a owl:Class ;
+    rdfs:label "Machine" ;
+    rdfs:comment "A production asset. Batches are attributed to one." ;
+    skos:altLabel "equipment", "work center", "asset" .
+
+mfg:ProductionLine a owl:Class ;
+    rdfs:label "Production Line" ;
+    skos:altLabel "line", "cell" .
+
+mfg:Plant a owl:Class ;
+    rdfs:label "Plant" ;
+    skos:altLabel "facility", "site" .
+
+# ── Quality ───────────────────────────────────────────────────────────────────
+
+mfg:Specification a owl:Class ;
+    rdfs:label "Specification" ;
+    rdfs:comment "A measurable requirement with a tolerance band." ;
+    skos:altLabel "spec", "tolerance", "requirement" .
+
+mfg:DefectType a owl:Class ;
+    rdfs:label "Defect Type" ;
+    rdfs:comment "A classified failure mode, e.g. porosity, dimensional drift, cold joint." ;
+    skos:altLabel "defect", "failure mode", "nonconformance" .
+
+mfg:QualityInspection a owl:Class ;
+    rdfs:label "Quality Inspection" ;
+    rdfs:comment "A recorded inspection event with an outcome." ;
+    skos:altLabel "inspection", "QC check" .
+
+mfg:Measurement a owl:Class ;
+    rdfs:label "Measurement" ;
+    rdfs:comment "A single measured value taken during an inspection." .
+
+mfg:CorrectiveAction a owl:Class ;
+    rdfs:label "Corrective Action" ;
+    rdfs:comment "A CAPA record responding to a defect." ;
+    skos:altLabel "CAPA", "remediation" .
+
+# ── Object properties ─────────────────────────────────────────────────────────
+
+# derivedFrom is transitive. Assert only immediate parentage and the full
+# upstream genealogy of any unit becomes derivable — which is what makes
+# "which supplier lot caused this field failure" a reasoning question rather
+# than a recursive CTE.
+mfg:derivedFrom a owl:ObjectProperty, owl:TransitiveProperty ;
+    rdfs:label "derived from" ;
+    rdfs:domain mfg:TraceableUnit ;
+    rdfs:range mfg:TraceableUnit ;
+    rdfs:comment """This unit was produced from that one. Transitive: product
+        derivedFrom subassembly derivedFrom batch derivedFrom supplier lot means
+        the product is derivedFrom the supplier lot.""" .
+
+mfg:consumedIn a owl:ObjectProperty ;
+    rdfs:label "consumed in" ;
+    rdfs:domain mfg:TraceableUnit ;
+    rdfs:range mfg:TraceableUnit ;
+    owl:inverseOf mfg:derivedFrom .
+
+mfg:sourcedFrom a owl:ObjectProperty ;
+    rdfs:label "sourced from" ;
+    rdfs:domain mfg:SupplierLot ;
+    rdfs:range mfg:Supplier ;
+    rdfs:comment "Which supplier provided this lot." .
+
+mfg:producedBy a owl:ObjectProperty ;
+    rdfs:label "produced by" ;
+    rdfs:domain mfg:Batch ;
+    rdfs:range mfg:Machine .
+
+mfg:runsOn a owl:ObjectProperty ;
+    rdfs:label "runs on" ;
+    rdfs:domain mfg:Machine ;
+    rdfs:range mfg:ProductionLine .
+
+mfg:locatedAt a owl:ObjectProperty ;
+    rdfs:label "located at" ;
+    rdfs:domain mfg:ProductionLine ;
+    rdfs:range mfg:Plant .
+
+mfg:exhibitsDefect a owl:ObjectProperty ;
+    rdfs:label "exhibits defect" ;
+    rdfs:domain mfg:TraceableUnit ;
+    rdfs:range mfg:DefectType .
+
+mfg:violatesSpec a owl:ObjectProperty ;
+    rdfs:label "violates spec" ;
+    rdfs:domain mfg:TraceableUnit ;
+    rdfs:range mfg:Specification .
+
+mfg:governedBy a owl:ObjectProperty ;
+    rdfs:label "governed by" ;
+    rdfs:domain mfg:Component ;
+    rdfs:range mfg:Specification ;
+    rdfs:comment "The specification this component must satisfy." .
+
+mfg:inspectedBy a owl:ObjectProperty ;
+    rdfs:label "inspected by" ;
+    rdfs:domain mfg:TraceableUnit ;
+    rdfs:range mfg:QualityInspection .
+
+mfg:recordedMeasurement a owl:ObjectProperty ;
+    rdfs:label "recorded measurement" ;
+    rdfs:domain mfg:QualityInspection ;
+    rdfs:range mfg:Measurement .
+
+mfg:measuresSpec a owl:ObjectProperty ;
+    rdfs:label "measures spec" ;
+    rdfs:domain mfg:Measurement ;
+    rdfs:range mfg:Specification .
+
+mfg:attributedToSupplier a owl:ObjectProperty ;
+    rdfs:label "attributed to supplier" ;
+    rdfs:domain mfg:DefectType ;
+    rdfs:range mfg:Supplier ;
+    rdfs:comment """Root-cause attribution of a defect to a supplier. Distinct from
+        sourcedFrom: that records where material came from, this records a
+        determined causal finding.""" .
+
+mfg:attributedToMachine a owl:ObjectProperty ;
+    rdfs:label "attributed to machine" ;
+    rdfs:domain mfg:DefectType ;
+    rdfs:range mfg:Machine .
+
+mfg:addressedBy a owl:ObjectProperty ;
+    rdfs:label "addressed by" ;
+    rdfs:domain mfg:DefectType ;
+    rdfs:range mfg:CorrectiveAction .
+
+mfg:qualifiedFor a owl:ObjectProperty ;
+    rdfs:label "qualified for" ;
+    rdfs:domain mfg:Supplier ;
+    rdfs:range mfg:Component ;
+    rdfs:comment "Supplier is approved to provide this component." .
+
+# ── Datatype properties ───────────────────────────────────────────────────────
+
+mfg:unitId a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "unit ID" ;
+    rdfs:domain mfg:TraceableUnit ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Lot code, batch number, or serial number." .
+
+mfg:quantity a owl:DatatypeProperty ;
+    rdfs:label "quantity" ;
+    rdfs:domain mfg:TraceableUnit ;
+    rdfs:range xsd:integer .
+
+mfg:productionDate a owl:DatatypeProperty ;
+    rdfs:label "production date" ;
+    rdfs:domain mfg:Batch ;
+    rdfs:range xsd:dateTime .
+
+mfg:receivedDate a owl:DatatypeProperty ;
+    rdfs:label "received date" ;
+    rdfs:domain mfg:SupplierLot ;
+    rdfs:range xsd:date .
+
+mfg:supplierName a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "supplier name" ;
+    rdfs:domain mfg:Supplier ;
+    rdfs:range xsd:string .
+
+mfg:supplierTier a owl:DatatypeProperty ;
+    rdfs:label "supplier tier" ;
+    rdfs:domain mfg:Supplier ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "1 = direct, 2 = supplier's supplier, and so on." .
+
+mfg:onTimeDeliveryPct a owl:DatatypeProperty ;
+    rdfs:label "on-time delivery percentage" ;
+    rdfs:domain mfg:Supplier ;
+    rdfs:range xsd:decimal .
+
+mfg:certificationExpiry a owl:DatatypeProperty ;
+    rdfs:label "certification expiry" ;
+    rdfs:domain mfg:Supplier ;
+    rdfs:range xsd:date ;
+    rdfs:comment "Expired certification is a supply risk even with clean quality history." .
+
+mfg:leadTimeDays a owl:DatatypeProperty ;
+    rdfs:label "lead time days" ;
+    rdfs:domain mfg:Supplier ;
+    rdfs:range xsd:integer .
+
+mfg:singleSourced a owl:DatatypeProperty ;
+    rdfs:label "single sourced" ;
+    rdfs:domain mfg:Component ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment "True when only one qualified supplier exists. Concentration risk." .
+
+mfg:specName a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "spec name" ;
+    rdfs:domain mfg:Specification ;
+    rdfs:range xsd:string .
+
+mfg:targetValue a owl:DatatypeProperty ;
+    rdfs:label "target value" ;
+    rdfs:domain mfg:Specification ;
+    rdfs:range xsd:decimal .
+
+mfg:upperTolerance a owl:DatatypeProperty ;
+    rdfs:label "upper tolerance" ;
+    rdfs:domain mfg:Specification ;
+    rdfs:range xsd:decimal .
+
+mfg:lowerTolerance a owl:DatatypeProperty ;
+    rdfs:label "lower tolerance" ;
+    rdfs:domain mfg:Specification ;
+    rdfs:range xsd:decimal .
+
+mfg:specUnit a owl:DatatypeProperty ;
+    rdfs:label "spec unit" ;
+    rdfs:domain mfg:Specification ;
+    rdfs:range xsd:string ;
+    rdfs:comment "mm, MPa, ppm, and so on." .
+
+mfg:measuredValue a owl:DatatypeProperty ;
+    rdfs:label "measured value" ;
+    rdfs:domain mfg:Measurement ;
+    rdfs:range xsd:decimal .
+
+mfg:inspectionResult a owl:DatatypeProperty ;
+    rdfs:label "inspection result" ;
+    rdfs:domain mfg:QualityInspection ;
+    rdfs:range xsd:string ;
+    rdfs:comment "PASS | FAIL | REWORK." .
+
+mfg:inspectedAt a owl:DatatypeProperty ;
+    rdfs:label "inspected at" ;
+    rdfs:domain mfg:QualityInspection ;
+    rdfs:range xsd:dateTime .
+
+mfg:defectCode a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "defect code" ;
+    rdfs:domain mfg:DefectType ;
+    rdfs:range xsd:string .
+
+mfg:defectSeverity a owl:DatatypeProperty ;
+    rdfs:label "defect severity" ;
+    rdfs:domain mfg:DefectType ;
+    rdfs:range xsd:string ;
+    rdfs:comment "CRITICAL | MAJOR | MINOR — aligned to the customer's AQL scheme." .
+
+mfg:firstDetectedAt a owl:DatatypeProperty ;
+    rdfs:label "first detected at" ;
+    rdfs:domain mfg:DefectType ;
+    rdfs:range xsd:dateTime .
+
+mfg:rootCauseIdentifiedAt a owl:DatatypeProperty ;
+    rdfs:label "root cause identified at" ;
+    rdfs:domain mfg:DefectType ;
+    rdfs:range xsd:dateTime ;
+    rdfs:comment "Together with firstDetectedAt this yields time-to-root-cause." .
+
+mfg:machineName a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "machine name" ;
+    rdfs:domain mfg:Machine ;
+    rdfs:range xsd:string .
+
+mfg:lastCalibrated a owl:DatatypeProperty ;
+    rdfs:label "last calibrated" ;
+    rdfs:domain mfg:Machine ;
+    rdfs:range xsd:date ;
+    rdfs:comment "Calibration drift is a common latent cause of dimensional defects." .
+
+# ── Defect severity individuals ───────────────────────────────────────────────
+
+mfg:Critical a owl:Class ;
+    rdfs:subClassOf mfg:DefectType ;
+    rdfs:label "Critical Defect" ;
+    rdfs:comment "Safety or regulatory impact. Triggers containment." .
+
+mfg:Major a owl:Class ;
+    rdfs:subClassOf mfg:DefectType ;
+    rdfs:label "Major Defect" ;
+    rdfs:comment "Function impaired. Not shippable." .
+
+mfg:Minor a owl:Class ;
+    rdfs:subClassOf mfg:DefectType ;
+    rdfs:label "Minor Defect" ;
+    rdfs:comment "Cosmetic or within-concession. May ship with disposition." .

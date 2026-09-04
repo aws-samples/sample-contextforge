@@ -1,0 +1,18 @@
+name: Manufacturing Supply Chain Intelligence
+version: 1.0.0
+description: >-
+  Discrete-manufacturing quality and supply chain context: suppliers, lot
+  genealogy, production batches, specifications, and defects. Turns upstream
+  defect attribution and recall scoping into a traversal instead of an
+  investigation.
+
+default_namespace: manufacturing
+
+ontology: ontology.ttl
+ontology_title: ContextForge Manufacturing Supply Chain Ontology
+ontology_type: user_created
+
+metrics: metrics.osi.yaml
+sources: sources.yaml
+
+grants: []

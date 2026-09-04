@@ -1,0 +1,32 @@
+version: 0.2
+# Builds the amd64 image for App Runner and pushes to ECR (runs in AWS CodeBuild).
+#
+# TOOLING (to avoid confusion):
+#   - HERE, in CodeBuild: we use `docker`. This is AWS CodeBuild's own managed
+#     build environment — NOT Docker Desktop on your laptop. It builds on native
+#     x86, which is required: a local Apple-Silicon build segfaults the Next.js
+#     build under emulation (qemu signal 11).
+#   - LOCALLY, on a Mac: use `finch build` (Docker Desktop is disallowed at
+#     Amazon). You do NOT need Docker installed anywhere to work on this repo.
+# The image recipe (Dockerfile) is standard OCI and builds with any tool.
+#
+# We seed the SQLite DB in this CI step (native amd64, reliable) rather than
+# inside the image build, then the Containerfile bakes in the pre-seeded file.
+phases:
+  install:
+    runtime-versions:
+      nodejs: 22
+  pre_build:
+    commands:
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR
+      # Seed the DB, then fold WAL data into the single .db file so it copies cleanly.
+      - npm ci
+      - npx tsx scripts/seed.ts
+      - node -e "const D=require('better-sqlite3');const db=new D('contextforge.db');db.pragma('wal_checkpoint(TRUNCATE)');db.close();"
+      - node -e "const D=require('better-sqlite3');const n=new D('contextforge.db').prepare('select count(*) c from nodes').get().c;if(!n)throw new Error('seed produced 0 nodes');console.log('seeded nodes:',n)"
+  build:
+    commands:
+      - docker build -t $ECR/contextforge:latest .
+  post_build:
+    commands:
+      - docker push $ECR/contextforge:latest

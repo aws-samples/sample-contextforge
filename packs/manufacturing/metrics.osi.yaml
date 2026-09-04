@@ -1,0 +1,280 @@
+# OSI v1.0 — ContextForge Manufacturing Supply Chain governed metrics
+#
+# Defect rate is expressed in PPM (parts per million) because that is the unit
+# quality engineers actually use; reporting it as a fraction invites off-by-1000
+# misreadings in downstream summaries.
+
+osi_spec_version: "1.0"
+
+datasets:
+  - name: public.batches
+    data_source_id: ds-mes
+    description: "Manufacturing Execution System production batch records"
+    synonyms:
+      - production_runs
+      - work_orders
+
+  - name: public.inspections
+    data_source_id: ds-qms
+    description: "Quality inspection events with pass/fail/rework outcomes"
+    synonyms:
+      - qc_records
+      - quality_checks
+
+  - name: public.defects
+    data_source_id: ds-qms
+    description: "Classified defect occurrences with severity and root-cause timing"
+    synonyms:
+      - nonconformances
+      - failures
+
+  - name: public.genealogy
+    data_source_id: ds-mes
+    description: "Parent-child traceability edges between traceable units"
+    synonyms:
+      - traceability
+      - lot_genealogy
+
+  - name: public.suppliers
+    data_source_id: ds-erp
+    description: "Supplier master with delivery performance and certification state"
+
+  - name: public.supplier_lots
+    data_source_id: ds-erp
+    description: "Received supplier lots linked to suppliers and components"
+
+metrics:
+  - name: defect_rate_ppm
+    description: >-
+      Defective units per million produced, counting CRITICAL and MAJOR defects
+      only. MINOR defects are excluded because they ship under concession.
+    expression:
+      dialects:
+        - dialect: ANSI_SQL
+          expression: >-
+            1000000.0 * SUM(defect_quantity) FILTER (WHERE defect_severity IN ('CRITICAL', 'MAJOR'))
+            / NULLIF(SUM(produced_quantity), 0)
+        - dialect: SNOWFLAKE
+          expression: >-
+            1000000.0 * SUM(IFF(defect_severity IN ('CRITICAL', 'MAJOR'), defect_quantity, 0))
+            / NULLIF(SUM(produced_quantity), 0)
+    ai_context:
+      synonyms:
+        - "defect rate"
+        - "PPM"
+        - "parts per million defective"
+        - "quality rate"
+      instructions: >-
+        Always report the unit as PPM explicitly. State that MINOR defects are
+        excluded if the user is comparing against a figure from another system,
+        since inclusion rules vary and that is the usual source of a mismatch.
+      examples:
+        - "What's our defect rate?"
+        - "How many PPM on line 3 last month?"
+    x_coa:
+      data_source_id: ds-qms
+      source_table: public.defects
+      unit: ppm
+      return_type: decimal
+      time_dimension: production_date
+      ontology_concepts:
+        - DefectType
+        - Batch
+
+  - name: first_pass_yield_pct
+    description: >-
+      Share of batches passing inspection on the first attempt, with no rework.
+    expression:
+      dialects:
+        - dialect: ANSI_SQL
+          expression: >-
+            100.0 * COUNT(*) FILTER (WHERE inspection_result = 'PASS' AND attempt_number = 1)
+            / NULLIF(COUNT(*) FILTER (WHERE attempt_number = 1), 0)
+        - dialect: SNOWFLAKE
+          expression: >-
+            100.0 * COUNT_IF(inspection_result = 'PASS' AND attempt_number = 1)
+            / NULLIF(COUNT_IF(attempt_number = 1), 0)
+    ai_context:
+      synonyms:
+        - "FPY"
+        - "first pass yield"
+        - "right first time"
+      instructions: >-
+        Distinct from overall yield, which counts units passing after rework.
+        If the user asks about "yield" without qualification, clarify which they
+        mean rather than assuming.
+      examples:
+        - "What's our first pass yield?"
+        - "How much rework are we doing?"
+    x_coa:
+      data_source_id: ds-qms
+      source_table: public.inspections
+      unit: percent
+      return_type: decimal
+      time_dimension: inspected_at
+      ontology_concepts:
+        - QualityInspection
+        - Batch
+
+  - name: time_to_root_cause_hours
+    description: >-
+      Average hours between a defect first being detected and its root cause
+      being identified. Measures investigation velocity, not fix velocity.
+    expression:
+      dialects:
+        - dialect: ANSI_SQL
+          expression: >-
+            AVG(EXTRACT(EPOCH FROM (root_cause_identified_at - first_detected_at)) / 3600)
+            FILTER (WHERE root_cause_identified_at IS NOT NULL)
+        - dialect: DATABRICKS
+          expression: >-
+            AVG(CASE WHEN root_cause_identified_at IS NOT NULL
+            THEN (UNIX_TIMESTAMP(root_cause_identified_at) - UNIX_TIMESTAMP(first_detected_at)) / 3600 END)
+    ai_context:
+      synonyms:
+        - "time to root cause"
+        - "investigation time"
+        - "TTRC"
+      instructions: >-
+        This is the metric the ontology most directly improves: transitive
+        genealogy turns upstream attribution from a manual investigation into a
+        traversal. Excludes defects with no root cause identified yet — mention
+        that open investigations are not counted.
+      examples:
+        - "How long does it take us to find root cause?"
+        - "Are we getting faster at investigations?"
+    x_coa:
+      data_source_id: ds-qms
+      source_table: public.defects
+      unit: hours
+      return_type: decimal
+      time_dimension: first_detected_at
+      ontology_concepts:
+        - DefectType
+        - CorrectiveAction
+
+  - name: supplier_risk_score
+    description: >-
+      Composite 0-100 supplier risk: defect attribution, late delivery, expired
+      certification, and single-sourced concentration. Higher is worse.
+    expression:
+      dialects:
+        - dialect: ANSI_SQL
+          expression: >-
+            LEAST(100, GREATEST(0,
+            COALESCE(attributed_defect_count, 0) * 10
+            + (100 - COALESCE(on_time_delivery_pct, 100)) * 0.4
+            + CASE WHEN certification_expiry < CURRENT_DATE THEN 25 ELSE 0 END
+            + CASE WHEN single_sourced_component_count > 0 THEN 15 ELSE 0 END))
+    ai_context:
+      synonyms:
+        - "supplier risk"
+        - "vendor risk score"
+        - "supplier scorecard"
+      instructions: >-
+        A composite, so always break out which component dominates when a score
+        is high — an expired certificate and a genuine quality problem warrant
+        different responses. Do not present this as an industry-standard index;
+        it is a ContextForge-defined heuristic.
+      examples:
+        - "Which suppliers are highest risk?"
+        - "Why is Acme Metals flagged?"
+    x_coa:
+      data_source_id: ds-erp
+      source_table: public.suppliers
+      return_type: decimal
+      ontology_concepts:
+        - Supplier
+        - DefectType
+
+  - name: affected_unit_count
+    description: >-
+      Count of distinct downstream traceable units derived from a given upstream
+      unit. The containment-scope metric for a recall or quarantine decision.
+    expression:
+      dialects:
+        - dialect: ANSI_SQL
+          expression: "COUNT(DISTINCT descendant_unit_id)"
+    ai_context:
+      synonyms:
+        - "recall scope"
+        - "containment scope"
+        - "affected units"
+        - "blast radius"
+      instructions: >-
+        Requires an upstream unit as input. Prefer the ontology's transitive
+        derivedFrom relation when the question spans more than one production
+        level: this SQL metric counts rows in a precomputed genealogy closure,
+        while derivedFrom reasons over asserted parentage and will be correct
+        even where the closure table is stale.
+      examples:
+        - "If supplier lot L-4471 is bad, how many finished units are affected?"
+        - "What's the recall scope for batch B-2203?"
+    x_coa:
+      data_source_id: ds-mes
+      source_table: public.genealogy
+      return_type: integer
+      ontology_concepts:
+        - TraceableUnit
+        - derivedFrom
+
+  - name: spec_violation_count
+    description: >-
+      Count of measurements falling outside their specification tolerance band.
+    expression:
+      dialects:
+        - dialect: ANSI_SQL
+          expression: >-
+            COUNT(*) FILTER (WHERE measured_value > upper_tolerance
+            OR measured_value < lower_tolerance)
+        - dialect: SNOWFLAKE
+          expression: >-
+            COUNT_IF(measured_value > upper_tolerance OR measured_value < lower_tolerance)
+    ai_context:
+      synonyms:
+        - "out of spec"
+        - "tolerance violations"
+        - "spec failures"
+      instructions: >-
+        Counts individual measurements, not batches — one batch can contribute
+        several. Say so when reporting alongside batch-level metrics.
+      examples:
+        - "How many out-of-spec measurements this week?"
+        - "Which specs are we failing most?"
+    x_coa:
+      data_source_id: ds-qms
+      source_table: public.inspections
+      return_type: integer
+      time_dimension: inspected_at
+      ontology_concepts:
+        - Specification
+        - Measurement
+
+  - name: single_sourced_component_count
+    description: >-
+      Count of active components with exactly one qualified supplier. A supply
+      continuity risk independent of current quality performance.
+    expression:
+      dialects:
+        - dialect: ANSI_SQL
+          expression: >-
+            COUNT(DISTINCT CASE WHEN qualified_supplier_count = 1 AND active = TRUE
+            THEN component_id END)
+    ai_context:
+      synonyms:
+        - "single source risk"
+        - "sole sourced parts"
+        - "concentration risk"
+      instructions: >-
+        Use for supply-resilience questions. Independent of quality: a
+        single-sourced part from an excellent supplier is still a continuity risk.
+      examples:
+        - "How exposed are we to single-source suppliers?"
+        - "Which parts have only one supplier?"
+    x_coa:
+      data_source_id: ds-erp
+      source_table: public.supplier_lots
+      return_type: integer
+      ontology_concepts:
+        - Component
+        - Supplier

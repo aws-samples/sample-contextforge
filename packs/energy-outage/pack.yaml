@@ -1,0 +1,17 @@
+name: Energy Outage Intelligence
+version: 1.0.0
+description: >-
+  Electric distribution outage context: outages, network topology, crews, access
+  obstacles, and customer impact. Powers both operator restoration decisions and
+  the customer-facing "why is my power out" portal.
+
+default_namespace: energy
+
+ontology: ontology.ttl
+ontology_title: ContextForge Energy Outage Ontology
+ontology_type: user_created
+
+metrics: metrics.osi.yaml
+sources: sources.yaml
+
+grants: []

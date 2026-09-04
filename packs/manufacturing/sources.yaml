@@ -1,0 +1,80 @@
+# Source registration templates for the Manufacturing pack.
+#
+# Three systems, three data_source_ids:
+#
+#   ds-mes  Manufacturing Execution System   batches, genealogy
+#   ds-qms  Quality Management System        inspections, defects, measurements
+#   ds-erp  ERP                              suppliers, received lots, components
+#
+# Inert until filled in — source registration mints a new sourceId per call, so
+# the loader will not guess these.
+#
+# Expected table shapes for metrics.osi.yaml:
+#
+#   public.batches(batch_id, machine_id, produced_quantity, production_date,
+#                  component_id)
+#   public.inspections(inspection_id, unit_id, inspection_result, attempt_number,
+#                      inspected_at, measured_value, upper_tolerance,
+#                      lower_tolerance, spec_id)
+#   public.defects(defect_id, unit_id, defect_code, defect_severity,
+#                  defect_quantity, produced_quantity, first_detected_at,
+#                  root_cause_identified_at, attributed_supplier_id,
+#                  production_date)
+#   public.genealogy(parent_unit_id, descendant_unit_id, depth)
+#   public.suppliers(supplier_id, supplier_name, on_time_delivery_pct,
+#                    certification_expiry, attributed_defect_count,
+#                    single_sourced_component_count)
+#   public.supplier_lots(lot_id, supplier_id, component_id,
+#                        qualified_supplier_count, active, received_date)
+#
+# Note on public.genealogy: this is the precomputed transitive closure that
+# affected_unit_count and time_to_root_cause_hours query. The ontology's
+# derivedFrom relation only needs immediate parentage, so if you are choosing
+# what to load, load direct parent-child edges into the graph and let the
+# reasoner close them. Keep the closure table for SQL metrics only.
+
+sources: []
+
+# ── Example: MES + QMS in SQL Server ──────────────────────────────────────────
+#
+# sources:
+#   - sourceType: DATABASE
+#     databaseSource:
+#       name: mes
+#       metadataEnrichmentEnabled: true
+#       jdbcConfiguration:
+#         engine: SQLSERVER
+#         host: ${MES_DB_HOST}
+#         port: 1433
+#         databaseName: mes
+#         credentialSecretArn: ${MES_DB_SECRET_ARN}
+#         tableFilter:
+#           - batches
+#           - genealogy
+#
+# ── Example: ERP supplier master in Snowflake ─────────────────────────────────
+# Snowflake is the one engine with an extra warehouse field in
+# JdbcConfiguration; the others ignore it.
+#
+#   - sourceType: DATABASE
+#     databaseSource:
+#       name: erp-suppliers
+#       jdbcConfiguration:
+#         engine: SNOWFLAKE
+#         host: ${SNOWFLAKE_ACCOUNT}.snowflakecomputing.com
+#         port: 443
+#         databaseName: ERP
+#         credentialSecretArn: ${SNOWFLAKE_SECRET_ARN}
+#         schemaFilter:
+#           - PUBLIC
+#
+# ── Example: supplier certificates and CAPA documents ─────────────────────────
+#
+#   - sourceType: DOCUMENTS
+#     documentSource:
+#       name: quality-documents
+#       sourceBucketArn: ${QUALITY_DOC_BUCKET_ARN}
+#       s3Prefixes:
+#         - supplier-certificates/
+#         - capa-reports/
+#         - material-certifications/

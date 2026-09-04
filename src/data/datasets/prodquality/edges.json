@@ -1,0 +1,57 @@
+[
+  { "source": "drill-vc20", "target": "rev-cluster-cold", "relation": "HAS_REVIEWS", "properties": { "sentiment": "negative" } },
+  { "source": "drill-vc20", "target": "rev-cluster-baseline", "relation": "HAS_REVIEWS", "properties": { "sentiment": "positive" } },
+  { "source": "drill-vc20", "target": "rev-cluster-grip", "relation": "HAS_REVIEWS", "properties": { "sentiment": "mixed", "note": "false lead — not climate-correlated" } },
+  { "source": "driver-vc20i", "target": "rev-cluster-driver-cold", "relation": "HAS_REVIEWS", "properties": { "sentiment": "negative" } },
+
+  { "source": "rev-cluster-cold", "target": "region-north", "relation": "CONCENTRATED_IN", "properties": { "correlation": "0.89", "evidence": "312/312 negative reviews geolocate to cold-climate states" } },
+  { "source": "rev-cluster-driver-cold", "target": "region-north", "relation": "CONCENTRATED_IN", "properties": { "correlation": "0.86" } },
+  { "source": "rev-cluster-baseline", "target": "region-south", "relation": "CONCENTRATED_IN", "properties": {} },
+  { "source": "rev-cluster-grip", "target": "region-south", "relation": "CONCENTRATED_IN", "properties": { "note": "spread evenly across climates — rules out a climate root cause" } },
+
+  { "source": "region-north", "target": "store-lowes-mn", "relation": "INCLUDES_STORE", "properties": {} },
+  { "source": "region-north", "target": "store-acehw-wi", "relation": "INCLUDES_STORE", "properties": {} },
+  { "source": "region-north", "target": "store-menards-nd", "relation": "INCLUDES_STORE", "properties": {} },
+  { "source": "region-south", "target": "store-homedepot-tx", "relation": "INCLUDES_STORE", "properties": {} },
+
+  { "source": "store-lowes-mn", "target": "return-batch-winter", "relation": "GENERATED_RETURNS", "properties": {} },
+  { "source": "store-acehw-wi", "target": "return-batch-winter", "relation": "GENERATED_RETURNS", "properties": {} },
+  { "source": "store-menards-nd", "target": "return-batch-winter", "relation": "GENERATED_RETURNS", "properties": {} },
+
+  { "source": "return-batch-winter", "target": "drill-vc20", "relation": "RETURNS_OF", "properties": {} },
+  { "source": "return-batch-driver", "target": "driver-vc20i", "relation": "RETURNS_OF", "properties": {} },
+  { "source": "return-batch-winter", "target": "battery-pack", "relation": "FAULT_ISOLATED_TO", "properties": { "evidence": "94% of winter returns fail battery diagnostic, motor & chuck pass" } },
+  { "source": "return-batch-driver", "target": "battery-pack", "relation": "FAULT_ISOLATED_TO", "properties": { "evidence": "same 2.0Ah pack, same cold-charge failure" } },
+  { "source": "return-batch-winter", "target": "charger-unit", "relation": "INVESTIGATED_CLEARED", "properties": { "evidence": "chargers pass cold test — ruled out" } },
+
+  { "source": "drill-vc20", "target": "battery-pack", "relation": "HAS_COMPONENT", "properties": {} },
+  { "source": "drill-vc20", "target": "motor-assembly", "relation": "HAS_COMPONENT", "properties": {} },
+  { "source": "drill-vc20", "target": "chuck-assembly", "relation": "HAS_COMPONENT", "properties": {} },
+  { "source": "driver-vc20i", "target": "battery-pack", "relation": "HAS_COMPONENT", "properties": { "note": "same 2.0Ah pack as the drill" } },
+  { "source": "driver-vc20i", "target": "battery-pack-4ah", "relation": "HAS_COMPONENT", "properties": { "note": "optional XL pack — Apex cells, no complaints" } },
+
+  { "source": "battery-pack", "target": "cell-lot-ns", "relation": "BUILT_FROM_LOT", "properties": { "build_window": "Sep-Nov" } },
+  { "source": "battery-pack", "target": "cell-lot-ax", "relation": "BUILT_FROM_LOT", "properties": { "build_window": "Jul-Aug" } },
+  { "source": "battery-pack-4ah", "target": "cell-lot-ax", "relation": "BUILT_FROM_LOT", "properties": { "note": "XL pack uses only Apex cells" } },
+
+  { "source": "cell-lot-ns", "target": "supplier-northstar", "relation": "SUPPLIED_BY", "properties": { "cold_failure": "capacity drops to 41% at 20F" } },
+  { "source": "cell-lot-ns-prior", "target": "supplier-northstar", "relation": "SUPPLIED_BY", "properties": { "note": "prior good lot from same supplier" } },
+  { "source": "cell-lot-ax", "target": "supplier-apex", "relation": "SUPPLIED_BY", "properties": {} },
+
+  { "source": "cell-lot-ns", "target": "electrolyte-change", "relation": "ROOT_CAUSED_BY", "properties": { "evidence": "cold failure appears only in lots built after ECN-NS-77" } },
+  { "source": "electrolyte-change", "target": "supplier-northstar", "relation": "INTRODUCED_BY", "properties": {} },
+  { "source": "cell-lot-ns-prior", "target": "electrolyte-change", "relation": "PREDATES", "properties": { "note": "prior lot was before the change — passed cold test" } },
+
+  { "source": "supplier-northstar", "target": "scorecard-ns", "relation": "HAS_SCORECARD", "properties": {} },
+  { "source": "supplier-apex", "target": "scorecard-ax", "relation": "HAS_SCORECARD", "properties": {} },
+  { "source": "supplier-northstar", "target": "capa-ns-01", "relation": "HAS_CORRECTIVE_ACTION", "properties": {} },
+  { "source": "capa-ns-01", "target": "cell-lot-ns", "relation": "QUARANTINES", "properties": {} },
+
+  { "source": "cell-lot-ns", "target": "po-ns-4411", "relation": "SOURCED_VIA", "properties": {} },
+  { "source": "cell-lot-ns-prior", "target": "po-ns-3300", "relation": "SOURCED_VIA", "properties": {} },
+  { "source": "cell-lot-ax", "target": "po-ax-4390", "relation": "SOURCED_VIA", "properties": {} },
+
+  { "source": "po-ns-4411", "target": "supplier-northstar", "relation": "ISSUED_TO", "properties": {} },
+  { "source": "po-ns-3300", "target": "supplier-northstar", "relation": "ISSUED_TO", "properties": {} },
+  { "source": "po-ax-4390", "target": "supplier-apex", "relation": "ISSUED_TO", "properties": {} }
+]

@@ -1,0 +1,39 @@
+[
+  { "source": "apt29", "target": "solarwinds-campaign", "relation": "ATTRIBUTED_TO", "properties": { "confidence": 98, "evidence": "FBI/CISA joint advisory AA21-008A" } },
+  { "source": "solarwinds-campaign", "target": "cve-2020-10148", "relation": "EXPLOITS", "properties": { "stage": "Initial Access" } },
+  { "source": "solarwinds-campaign", "target": "sunburst", "relation": "DEPLOYS_MALWARE", "properties": { "delivery": "Trojanized update" } },
+  { "source": "apt29", "target": "t1195-002", "relation": "USES_TECHNIQUE", "properties": { "campaign": "SolarWinds" } },
+  { "source": "apt29", "target": "t1546-003", "relation": "USES_TECHNIQUE", "properties": { "campaign": "SolarWinds" } },
+  { "source": "apt29", "target": "t1071-001", "relation": "USES_TECHNIQUE", "properties": { "campaign": "SolarWinds" } },
+  { "source": "apt29", "target": "t1550-001", "relation": "USES_TECHNIQUE", "properties": { "campaign": "SolarWinds" } },
+  { "source": "apt29", "target": "t1567-002", "relation": "USES_TECHNIQUE", "properties": { "campaign": "SolarWinds" } },
+  { "source": "apt29", "target": "cve-2023-23397", "relation": "EXPLOITS", "properties": { "stage": "Credential theft", "year": 2023 } },
+  { "source": "t1195-002", "target": "t1546-003", "relation": "CHAINS_TO", "properties": { "order": 1, "description": "Supply chain → persistence" } },
+  { "source": "t1546-003", "target": "t1071-001", "relation": "CHAINS_TO", "properties": { "order": 2, "description": "Persistence → C2" } },
+  { "source": "t1071-001", "target": "t1550-001", "relation": "CHAINS_TO", "properties": { "order": 3, "description": "C2 → lateral movement" } },
+  { "source": "t1550-001", "target": "t1567-002", "relation": "CHAINS_TO", "properties": { "order": 4, "description": "Lateral → exfiltration" } },
+  { "source": "sunburst", "target": "ioc-1", "relation": "COMMUNICATES_WITH", "properties": { "protocol": "DNS then HTTP" } },
+  { "source": "sunburst", "target": "ioc-3", "relation": "IDENTIFIED_BY", "properties": { "type": "file hash" } },
+
+  { "source": "vt", "target": "t1190", "relation": "USES_TECHNIQUE", "properties": { "targets": "Internet-facing appliances" } },
+  { "source": "vt", "target": "t1059-001", "relation": "USES_TECHNIQUE", "properties": { "variant": "Living-off-the-land" } },
+  { "source": "vt", "target": "t1078", "relation": "USES_TECHNIQUE", "properties": { "variant": "Stolen credentials" } },
+  { "source": "vt", "target": "cve-2024-3400", "relation": "EXPLOITS", "properties": { "stage": "Initial Access", "target": "PAN-OS firewalls" } },
+
+  { "source": "sc", "target": "t1566-004", "relation": "USES_TECHNIQUE", "properties": { "variant": "Vishing IT helpdesk" } },
+  { "source": "sc", "target": "t1078", "relation": "USES_TECHNIQUE", "properties": { "variant": "SIM swapping + Okta" } },
+
+  { "source": "lazarus", "target": "cl0p-ransomware", "relation": "DEPLOYS_MALWARE", "properties": { "note": "Attribution disputed" } },
+  { "source": "cl0p-ransomware", "target": "moveit-campaign", "relation": "USED_IN", "properties": {} },
+  { "source": "moveit-campaign", "target": "cve-2023-34362", "relation": "EXPLOITS", "properties": { "stage": "Initial Access" } },
+  { "source": "cl0p-ransomware", "target": "ioc-2", "relation": "COMMUNICATES_WITH", "properties": { "protocol": "TOR + clearnet" } },
+
+  { "source": "cve-2021-44228", "target": "asset-log4j", "relation": "AFFECTS_ASSET", "properties": { "severity": "Critical", "exploitable": true } },
+  { "source": "cve-2021-44228", "target": "asset-spring", "relation": "AFFECTS_ASSET", "properties": { "severity": "Critical", "transitive": true } },
+  { "source": "log4shell-campaign", "target": "cve-2021-44228", "relation": "EXPLOITS", "properties": { "scale": "Mass exploitation" } },
+  { "source": "cve-2023-34362", "target": "asset-moveit", "relation": "AFFECTS_ASSET", "properties": { "severity": "Critical" } },
+  { "source": "cve-2023-23397", "target": "asset-outlook", "relation": "AFFECTS_ASSET", "properties": { "severity": "Critical", "zero_click": true } },
+
+  { "source": "cobaltstrike", "target": "t1071-001", "relation": "USES_TECHNIQUE", "properties": { "capability": "Beacon C2" } },
+  { "source": "cobaltstrike", "target": "t1550-001", "relation": "USES_TECHNIQUE", "properties": { "capability": "Token impersonation" } }
+]

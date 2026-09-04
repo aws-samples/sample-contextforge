@@ -1,0 +1,12 @@
+[
+  { "id": "doc-001", "source": "NVD CVE Feed", "title": "CVE-2020-10148: SolarWinds Orion API Auth Bypass", "type": "vulnerability", "ingested": "2024-01-15T08:00:00Z", "chunks": 3, "entities_extracted": ["cve-2020-10148", "apt29"] },
+  { "id": "doc-002", "source": "MITRE ATT&CK", "title": "APT29 - Technique Profile", "type": "threat_intelligence", "ingested": "2024-01-15T08:01:00Z", "chunks": 12, "entities_extracted": ["apt29", "t1195-002", "t1546-003", "t1071-001", "t1550-001", "t1567-002"] },
+  { "id": "doc-003", "source": "Incident Reports", "title": "SolarWinds Campaign Post-Mortem (Internal)", "type": "incident_report", "ingested": "2024-01-15T09:00:00Z", "chunks": 24, "entities_extracted": ["apt29", "sunburst", "solarwinds-campaign", "cve-2020-10148"] },
+  { "id": "doc-004", "source": "NVD CVE Feed", "title": "CVE-2021-44228: Apache Log4j JNDI RCE", "type": "vulnerability", "ingested": "2024-01-15T08:02:00Z", "chunks": 4, "entities_extracted": ["cve-2021-44228", "asset-log4j"] },
+  { "id": "doc-005", "source": "SBOM Registry", "title": "Enterprise SBOM Q4-2024", "type": "sbom", "ingested": "2024-01-16T10:00:00Z", "chunks": 48, "entities_extracted": ["asset-log4j", "asset-spring", "asset-moveit", "asset-outlook"] },
+  { "id": "doc-006", "source": "CISA KEV Catalog", "title": "Known Exploited Vulnerabilities - January 2024", "type": "advisory", "ingested": "2024-01-17T06:00:00Z", "chunks": 8, "entities_extracted": ["cve-2021-44228", "cve-2023-34362", "cve-2024-3400"] },
+  { "id": "doc-007", "source": "MITRE ATT&CK", "title": "Volt Typhoon - Living off the Land", "type": "threat_intelligence", "ingested": "2024-01-18T07:00:00Z", "chunks": 9, "entities_extracted": ["vt", "t1190", "t1059-001", "t1078"] },
+  { "id": "doc-008", "source": "Incident Reports", "title": "MOVEit Transfer Exploitation - IR-2023-047", "type": "incident_report", "ingested": "2024-01-19T11:00:00Z", "chunks": 18, "entities_extracted": ["cve-2023-34362", "cl0p-ransomware", "moveit-campaign", "asset-moveit"] },
+  { "id": "doc-009", "source": "CISA KEV Catalog", "title": "PAN-OS GlobalProtect CVE-2024-3400 Advisory", "type": "advisory", "ingested": "2024-04-12T14:00:00Z", "chunks": 5, "entities_extracted": ["cve-2024-3400", "vt"] },
+  { "id": "doc-010", "source": "MITRE ATT&CK", "title": "Scattered Spider - Social Engineering", "type": "threat_intelligence", "ingested": "2024-02-01T09:00:00Z", "chunks": 7, "entities_extracted": ["sc", "t1566-004", "t1078"] }
+]

@@ -1,0 +1,45 @@
+[
+  { "id": "drill-vc20", "label": "VoltCore 20V Cordless Drill", "type": "Product", "properties": { "sku": "VC-20-DRL", "category": "Power Tools", "units_sold_ytd": 184200, "list_price_usd": 129 } },
+  { "id": "driver-vc20i", "label": "VoltCore 20V Impact Driver", "type": "Product", "properties": { "sku": "VC-20-IMP", "category": "Power Tools", "units_sold_ytd": 96500, "list_price_usd": 149, "note": "shares the VC 20V battery platform with the drill" } },
+
+  { "id": "rev-cluster-cold", "label": "Review Cluster: \"dies in the cold\"", "type": "ReviewCluster", "properties": { "count": 312, "avg_rating": 1.8, "keywords": "won't hold charge, dies below freezing, dead on arrival winter", "spike_month": "Nov-Jan", "verbatim": "Worked fine in October, useless once it hit 20 degrees. Battery drops dead in minutes." } },
+  { "id": "rev-cluster-baseline", "label": "Review Cluster: general praise", "type": "ReviewCluster", "properties": { "count": 4100, "avg_rating": 4.6, "keywords": "great value, powerful, good grip", "verbatim": "Excellent value, plenty of torque for the price." } },
+  { "id": "rev-cluster-driver-cold", "label": "Review Cluster: impact driver \"battery dead in winter\"", "type": "ReviewCluster", "properties": { "count": 88, "avg_rating": 2.1, "keywords": "battery dies cold, won't hold charge, winter", "spike_month": "Dec-Jan", "note": "same symptom as the drill, same season" } },
+  { "id": "rev-cluster-grip", "label": "Review Cluster: \"grip feels cheap\" (false lead)", "type": "ReviewCluster", "properties": { "count": 140, "avg_rating": 3.2, "keywords": "grip rubber, ergonomics, plastic feel", "note": "cosmetic complaint, NOT climate-correlated — graph rules this out as a root-cause path" } },
+
+  { "id": "region-north", "label": "Northern / Cold-Climate Region", "type": "Region", "properties": { "states": "MN, WI, MI, ND, ME, MT", "avg_winter_temp_f": 18 } },
+  { "id": "region-south", "label": "Southern / Warm Region", "type": "Region", "properties": { "states": "TX, FL, AZ, GA", "avg_winter_temp_f": 61 } },
+
+  { "id": "store-lowes-mn", "label": "Lowe's — Minnesota stores", "type": "Store", "properties": { "retailer": "Lowe's", "region": "north", "return_rate_pct": 14.2, "units_sold": 21400 } },
+  { "id": "store-acehw-wi", "label": "Ace Hardware — Wisconsin stores", "type": "Store", "properties": { "retailer": "Ace Hardware", "region": "north", "return_rate_pct": 12.8, "units_sold": 9800 } },
+  { "id": "store-menards-nd", "label": "Menards — North Dakota stores", "type": "Store", "properties": { "retailer": "Menards", "region": "north", "return_rate_pct": 15.6, "units_sold": 7300 } },
+  { "id": "store-homedepot-tx", "label": "Home Depot — Texas stores", "type": "Store", "properties": { "retailer": "Home Depot", "region": "south", "return_rate_pct": 2.1, "units_sold": 44100 } },
+
+  { "id": "return-batch-winter", "label": "Winter Return Batch (Q4-Q1)", "type": "Return", "properties": { "count": 2870, "top_reason": "battery won't charge / drains fast", "climate_correlation": "0.91" } },
+  { "id": "return-batch-driver", "label": "Impact Driver Winter Returns (Q4-Q1)", "type": "Return", "properties": { "count": 640, "top_reason": "battery dead in cold", "climate_correlation": "0.88" } },
+
+  { "id": "battery-pack", "label": "VC 20V 2.0Ah Battery Pack", "type": "Component", "properties": { "part_no": "VC-BAT-20", "chemistry": "Li-ion 18650", "spec_min_temp_f": 32, "used_in": "drill + impact driver" } },
+  { "id": "battery-pack-4ah", "label": "VC 20V 4.0Ah Battery Pack (XL)", "type": "Component", "properties": { "part_no": "VC-BAT-40", "chemistry": "Li-ion 18650", "spec_min_temp_f": 32, "note": "premium pack, built only from Apex cells — no cold complaints" } },
+  { "id": "charger-unit", "label": "VC Fast Charger", "type": "Component", "properties": { "part_no": "VC-CHG-01", "returns_linked": 2, "note": "investigated and cleared — chargers pass cold test" } },
+  { "id": "motor-assembly", "label": "Brushless Motor Assembly", "type": "Component", "properties": { "part_no": "VC-MOT-01", "returns_linked": 3 } },
+  { "id": "chuck-assembly", "label": "13mm Keyless Chuck", "type": "Component", "properties": { "part_no": "VC-CHK-13", "returns_linked": 1 } },
+
+  { "id": "cell-lot-ns", "label": "Cell Lot NS-2411 (18650)", "type": "ComponentLot", "properties": { "lot_id": "NS-2411", "cold_test_pass": "FAIL @ 20F", "capacity_retention_20f_pct": 41, "build_months": "Sep-Nov", "units": 60000 } },
+  { "id": "cell-lot-ns-prior", "label": "Cell Lot NS-2308 (18650, prior)", "type": "ComponentLot", "properties": { "lot_id": "NS-2308", "cold_test_pass": "PASS", "capacity_retention_20f_pct": 84, "note": "NorthStar's earlier lot BEFORE the electrolyte change — passed cold test" } },
+  { "id": "cell-lot-ax", "label": "Cell Lot AX-2409 (18650)", "type": "ComponentLot", "properties": { "lot_id": "AX-2409", "cold_test_pass": "PASS", "capacity_retention_20f_pct": 88 } },
+
+  { "id": "electrolyte-change", "label": "Electrolyte Formulation Change (Q3)", "type": "RootCause", "properties": { "change_id": "ECN-NS-77", "description": "NorthStar switched to a lower-cost electrolyte in Q3; raises internal resistance below freezing", "requalified": "NO", "detected": "traced from cold-test failure back to the change notice" } },
+
+  { "id": "supplier-northstar", "label": "NorthStar Cells Ltd.", "type": "Supplier", "properties": { "supplier_id": "SUP-NS", "component": "18650 Li-ion cells", "qual_status": "conditional", "note": "changed electrolyte formulation Q3 without re-qualification" } },
+  { "id": "supplier-apex", "label": "Apex Power Components", "type": "Supplier", "properties": { "supplier_id": "SUP-AX", "component": "18650 Li-ion cells", "qual_status": "qualified" } },
+  { "id": "supplier-ceda", "label": "Cedar Cell Works", "type": "Supplier", "properties": { "supplier_id": "SUP-CD", "component": "18650 Li-ion cells", "qual_status": "qualified", "note": "backup source, no returns linked" } },
+
+  { "id": "scorecard-ns", "label": "Supplier Scorecard — NorthStar", "type": "SupplierScorecard", "properties": { "supplier": "NorthStar", "quality_score": 61, "on_time_delivery_pct": 97, "open_capas": 1, "flag": "quality drop Q4" } },
+  { "id": "scorecard-ax", "label": "Supplier Scorecard — Apex", "type": "SupplierScorecard", "properties": { "supplier": "Apex", "quality_score": 94, "on_time_delivery_pct": 91, "open_capas": 0 } },
+
+  { "id": "capa-ns-01", "label": "CAPA #NS-01 — NorthStar cold-performance", "type": "CorrectiveAction", "properties": { "capa_id": "CAPA-NS-01", "status": "open", "action": "revert electrolyte formulation + re-qualify at 20F; quarantine lot NS-2411", "owner": "Supplier Quality" } },
+
+  { "id": "po-ns-4411", "label": "PO #NS-4411 (NorthStar, Aug)", "type": "PurchaseOrder", "properties": { "po_id": "NS-4411", "qty": 60000, "supplier": "NorthStar Cells", "batch_used_in": "VC-BAT-20 Sep-Nov build" } },
+  { "id": "po-ns-3300", "label": "PO #NS-3300 (NorthStar, prior yr)", "type": "PurchaseOrder", "properties": { "po_id": "NS-3300", "qty": 40000, "supplier": "NorthStar Cells", "note": "prior-year order, lot NS-2308, no issues" } },
+  { "id": "po-ax-4390", "label": "PO #AX-4390 (Apex, Jul)", "type": "PurchaseOrder", "properties": { "po_id": "AX-4390", "qty": 45000, "supplier": "Apex Power" } }
+]

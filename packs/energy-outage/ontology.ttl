@@ -1,0 +1,327 @@
+@prefix eo:   <https://contextforge.io/ontology/energy-outage#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+# ── Ontology declaration ──────────────────────────────────────────────────────
+
+<https://contextforge.io/ontology/energy-outage>
+    a owl:Ontology ;
+    dcterms:title "ContextForge Energy Outage Ontology" ;
+    dcterms:description """Electric distribution outage domain model: outages, network
+        assets, crews, access obstacles, affected customers, and root causes. The
+        electrical topology is modelled with a transitive `feeds` relation so
+        downstream customer impact follows from asserted upstream connectivity
+        rather than from application-side traversal.""" ;
+    owl:versionInfo "1.0.0" .
+
+# ── Network assets ────────────────────────────────────────────────────────────
+
+eo:Asset a owl:Class ;
+    rdfs:label "Network Asset" ;
+    rdfs:comment "Any component of the electric distribution network." ;
+    skos:altLabel "equipment", "network element" .
+
+eo:Substation a owl:Class ;
+    rdfs:subClassOf eo:Asset ;
+    rdfs:label "Substation" ;
+    rdfs:comment "Transmission-to-distribution step-down point. Feeds one or more circuits." .
+
+eo:Feeder a owl:Class ;
+    rdfs:subClassOf eo:Asset ;
+    rdfs:label "Feeder" ;
+    rdfs:comment "A distribution circuit leaving a substation." ;
+    skos:altLabel "circuit", "distribution line" .
+
+eo:Transformer a owl:Class ;
+    rdfs:subClassOf eo:Asset ;
+    rdfs:label "Transformer" ;
+    rdfs:comment "Distribution transformer serving a small customer group." .
+
+eo:Switch a owl:Class ;
+    rdfs:subClassOf eo:Asset ;
+    rdfs:label "Switch" ;
+    rdfs:comment """Sectionalizing device. Switch state determines the actual
+        energised topology, so reachability is a function of configuration, not
+        just physical connection.""" ;
+    skos:altLabel "recloser", "sectionalizer" .
+
+eo:Pole a owl:Class ;
+    rdfs:subClassOf eo:Asset ;
+    rdfs:label "Pole" ;
+    rdfs:comment "Physical support structure. Frequently the thing that fails." .
+
+eo:ServiceTerritory a owl:Class ;
+    rdfs:label "Service Territory" ;
+    rdfs:comment "Geographic operating area, used for regional reliability rollups." ;
+    skos:altLabel "region", "operating area", "district" .
+
+# ── Outage domain ─────────────────────────────────────────────────────────────
+
+eo:Outage a owl:Class ;
+    rdfs:label "Outage" ;
+    rdfs:comment "A loss-of-service event affecting one or more customers." ;
+    skos:altLabel "interruption", "power outage", "service interruption" .
+
+eo:PlannedOutage a owl:Class ;
+    rdfs:subClassOf eo:Outage ;
+    rdfs:label "Planned Outage" ;
+    rdfs:comment """Scheduled maintenance interruption. Excluded from SAIDI/SAIFI
+        under most regulatory reporting regimes — filter on this when computing
+        reliability indices.""" .
+
+eo:UnplannedOutage a owl:Class ;
+    rdfs:subClassOf eo:Outage ;
+    rdfs:label "Unplanned Outage" ;
+    rdfs:comment "Fault-driven interruption. Counts toward reliability indices." .
+
+eo:RootCause a owl:Class ;
+    rdfs:label "Root Cause" ;
+    rdfs:comment "Determined cause of an outage, e.g. vegetation, equipment failure, animal, weather, vehicle." ;
+    skos:altLabel "cause", "fault cause" .
+
+eo:Crew a owl:Class ;
+    rdfs:label "Crew" ;
+    rdfs:comment "A field crew available for dispatch." ;
+    skos:altLabel "line crew", "field team" .
+
+eo:Obstacle a owl:Class ;
+    rdfs:label "Access Obstacle" ;
+    rdfs:comment """Something preventing or delaying crew access to an asset:
+        flooding, downed tree, blocked road, hazardous atmosphere, locked gate.""" ;
+    skos:altLabel "blocker", "access issue" .
+
+eo:Customer a owl:Class ;
+    rdfs:label "Customer" ;
+    rdfs:comment "A metered service point." ;
+    skos:altLabel "service point", "meter", "premise" .
+
+eo:CriticalCustomer a owl:Class ;
+    rdfs:subClassOf eo:Customer ;
+    rdfs:label "Critical Customer" ;
+    rdfs:comment """Hospital, water treatment, emergency services, or a customer on
+        the medical-baseline register. Restoration is prioritised.""" .
+
+eo:WorkOrder a owl:Class ;
+    rdfs:label "Work Order" ;
+    rdfs:comment "Dispatched unit of restoration work." .
+
+# ── Object properties ─────────────────────────────────────────────────────────
+
+# feeds is transitive, mirroring canReach in the OT Security pack. Assert only
+# direct downstream connections and the reachable set — and therefore the true
+# customer impact of an upstream failure — is derivable rather than computed.
+eo:feeds a owl:ObjectProperty, owl:TransitiveProperty ;
+    rdfs:label "feeds" ;
+    rdfs:domain eo:Asset ;
+    rdfs:range eo:Asset ;
+    rdfs:comment """Electrical supply direction: this asset supplies that asset.
+        Transitive — substation feeds feeder feeds transformer means the substation
+        feeds the transformer.""" .
+
+eo:fedBy a owl:ObjectProperty ;
+    rdfs:label "fed by" ;
+    rdfs:domain eo:Asset ;
+    rdfs:range eo:Asset ;
+    owl:inverseOf eo:feeds .
+
+eo:serves a owl:ObjectProperty ;
+    rdfs:label "serves" ;
+    rdfs:domain eo:Asset ;
+    rdfs:range eo:Customer ;
+    rdfs:comment "This asset delivers service to that customer." .
+
+eo:affectsAsset a owl:ObjectProperty ;
+    rdfs:label "affects asset" ;
+    rdfs:domain eo:Outage ;
+    rdfs:range eo:Asset ;
+    rdfs:comment "The asset that failed or was de-energised." .
+
+eo:affectsCustomer a owl:ObjectProperty ;
+    rdfs:label "affects customer" ;
+    rdfs:domain eo:Outage ;
+    rdfs:range eo:Customer ;
+    rdfs:comment """Materialised customer impact. Derivable from affectsAsset +
+        feeds + serves, but asserted directly as well because OMS systems record
+        it and the two can disagree — a disagreement worth surfacing.""" .
+
+eo:causedBy a owl:ObjectProperty ;
+    rdfs:label "caused by" ;
+    rdfs:domain eo:Outage ;
+    rdfs:range eo:RootCause .
+
+eo:assignedTo a owl:ObjectProperty ;
+    rdfs:label "assigned to" ;
+    rdfs:domain eo:Outage ;
+    rdfs:range eo:Crew .
+
+eo:hasWorkOrder a owl:ObjectProperty ;
+    rdfs:label "has work order" ;
+    rdfs:domain eo:Outage ;
+    rdfs:range eo:WorkOrder .
+
+eo:performedBy a owl:ObjectProperty ;
+    rdfs:label "performed by" ;
+    rdfs:domain eo:WorkOrder ;
+    rdfs:range eo:Crew .
+
+eo:blockingAccess a owl:ObjectProperty ;
+    rdfs:label "blocking access" ;
+    rdfs:domain eo:Obstacle ;
+    rdfs:range eo:Asset ;
+    rdfs:comment "This obstacle prevents crew access to that asset." .
+
+eo:delaysRestoration a owl:ObjectProperty ;
+    rdfs:label "delays restoration" ;
+    rdfs:domain eo:Obstacle ;
+    rdfs:range eo:Outage ;
+    rdfs:comment """Links an access obstacle to the outage whose ETA it pushes out.
+        This is the relation that lets the customer portal explain *why* an ETA
+        slipped instead of just showing a new time.""" .
+
+eo:locatedIn a owl:ObjectProperty ;
+    rdfs:label "located in" ;
+    rdfs:domain eo:Asset ;
+    rdfs:range eo:ServiceTerritory .
+
+eo:customerLocatedIn a owl:ObjectProperty ;
+    rdfs:label "customer located in" ;
+    rdfs:domain eo:Customer ;
+    rdfs:range eo:ServiceTerritory .
+
+# ── Datatype properties ───────────────────────────────────────────────────────
+
+eo:outageId a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "outage ID" ;
+    rdfs:domain eo:Outage ;
+    rdfs:range xsd:string .
+
+eo:outageStart a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "outage start" ;
+    rdfs:domain eo:Outage ;
+    rdfs:range xsd:dateTime .
+
+eo:outageEnd a owl:DatatypeProperty ;
+    rdfs:label "outage end" ;
+    rdfs:domain eo:Outage ;
+    rdfs:range xsd:dateTime ;
+    rdfs:comment "Absent while the outage is active." .
+
+eo:estimatedRestoration a owl:DatatypeProperty ;
+    rdfs:label "estimated restoration time" ;
+    rdfs:domain eo:Outage ;
+    rdfs:range xsd:dateTime ;
+    skos:altLabel "ETR", "ETA" .
+
+eo:etaRevisionCount a owl:DatatypeProperty ;
+    rdfs:label "ETA revision count" ;
+    rdfs:domain eo:Outage ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "How many times the estimate has moved. A customer-trust signal." .
+
+eo:customersAffected a owl:DatatypeProperty ;
+    rdfs:label "customers affected" ;
+    rdfs:domain eo:Outage ;
+    rdfs:range xsd:integer .
+
+eo:confirmed a owl:DatatypeProperty ;
+    rdfs:label "confirmed" ;
+    rdfs:domain eo:Outage ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment "False for outages inferred from AMI last-gasp or customer calls only." .
+
+eo:assetId a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "asset ID" ;
+    rdfs:domain eo:Asset ;
+    rdfs:range xsd:string .
+
+eo:voltageLevel a owl:DatatypeProperty ;
+    rdfs:label "voltage level" ;
+    rdfs:domain eo:Asset ;
+    rdfs:range xsd:decimal ;
+    rdfs:comment "Nominal operating voltage in kV." .
+
+eo:switchState a owl:DatatypeProperty ;
+    rdfs:label "switch state" ;
+    rdfs:domain eo:Switch ;
+    rdfs:range xsd:string ;
+    rdfs:comment "OPEN or CLOSED. Determines the energised topology." .
+
+eo:crewId a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "crew ID" ;
+    rdfs:domain eo:Crew ;
+    rdfs:range xsd:string .
+
+eo:crewSize a owl:DatatypeProperty ;
+    rdfs:label "crew size" ;
+    rdfs:domain eo:Crew ;
+    rdfs:range xsd:integer .
+
+eo:crewAvailable a owl:DatatypeProperty ;
+    rdfs:label "crew available" ;
+    rdfs:domain eo:Crew ;
+    rdfs:range xsd:boolean .
+
+eo:obstacleType a owl:DatatypeProperty ;
+    rdfs:label "obstacle type" ;
+    rdfs:domain eo:Obstacle ;
+    rdfs:range xsd:string ;
+    rdfs:comment "FLOODING | DOWNED_TREE | BLOCKED_ROAD | HAZARD | ACCESS_DENIED." .
+
+eo:obstacleClearedAt a owl:DatatypeProperty ;
+    rdfs:label "obstacle cleared at" ;
+    rdfs:domain eo:Obstacle ;
+    rdfs:range xsd:dateTime .
+
+eo:causeCategory a owl:DatatypeProperty ;
+    rdfs:label "cause category" ;
+    rdfs:domain eo:RootCause ;
+    rdfs:range xsd:string ;
+    rdfs:comment "VEGETATION | EQUIPMENT | ANIMAL | WEATHER | VEHICLE | UNKNOWN." .
+
+eo:excludeFromIndices a owl:DatatypeProperty ;
+    rdfs:label "exclude from reliability indices" ;
+    rdfs:domain eo:Outage ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment """True for major event days and planned work, which most
+        regulators exclude from SAIDI/SAIFI. Materially changes the numbers.""" .
+
+eo:meterNumber a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "meter number" ;
+    rdfs:domain eo:Customer ;
+    rdfs:range xsd:string .
+
+eo:medicalBaseline a owl:DatatypeProperty ;
+    rdfs:label "medical baseline" ;
+    rdfs:domain eo:Customer ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment "Customer depends on powered medical equipment. Restoration priority." .
+
+# ── Root cause individuals ────────────────────────────────────────────────────
+# Fixed reporting vocabulary, so declared rather than left to per-utility data.
+
+eo:Vegetation a eo:RootCause ;
+    rdfs:label "Vegetation" ;
+    eo:causeCategory "VEGETATION" .
+
+eo:EquipmentFailure a eo:RootCause ;
+    rdfs:label "Equipment Failure" ;
+    eo:causeCategory "EQUIPMENT" .
+
+eo:AnimalContact a eo:RootCause ;
+    rdfs:label "Animal Contact" ;
+    eo:causeCategory "ANIMAL" .
+
+eo:Weather a eo:RootCause ;
+    rdfs:label "Weather" ;
+    eo:causeCategory "WEATHER" .
+
+eo:VehicleContact a eo:RootCause ;
+    rdfs:label "Vehicle Contact" ;
+    eo:causeCategory "VEHICLE" .
+
+eo:UnknownCause a eo:RootCause ;
+    rdfs:label "Unknown" ;
+    eo:causeCategory "UNKNOWN" .

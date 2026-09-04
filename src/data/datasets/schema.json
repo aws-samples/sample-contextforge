@@ -1,0 +1,67 @@
+{
+  "version": "1.0.0",
+  "description": "ContextForge Universal Schema Definition. Provide data in this format to onboard a new vertical.",
+  "node_schema": {
+    "required_fields": {
+      "id": "Unique identifier for the entity (string)",
+      "label": "Human-readable display name (string)",
+      "type": "Entity category — must match one of the defined entityTypes for the vertical (string)"
+    },
+    "optional_fields": {
+      "properties": "Key-value object with domain-specific attributes (object)"
+    }
+  },
+  "edge_schema": {
+    "required_fields": {
+      "source": "ID of the source node (string)",
+      "target": "ID of the target node (string)",
+      "relation": "Relationship type — must match one of the defined relationTypes (string)"
+    },
+    "optional_fields": {
+      "properties": "Key-value object with edge metadata (confidence, evidence, etc.) (object)"
+    }
+  },
+  "document_schema": {
+    "required_fields": {
+      "id": "Unique document identifier (string)",
+      "source": "Name of the data source connector (string)",
+      "title": "Document title (string)",
+      "type": "Document category (string)"
+    },
+    "optional_fields": {
+      "ingested": "ISO 8601 timestamp of ingestion (string)",
+      "chunks": "Number of chunks created (number)",
+      "entities_extracted": "Array of node IDs extracted from this document (string[])"
+    }
+  },
+  "vertical_definition": {
+    "required": {
+      "name": "Vertical display name (e.g., 'OutageGraph Intelligence')",
+      "description": "One-line description of the vertical",
+      "entityTypes": "Array of entity type names (strings)",
+      "relationTypes": "Array of relationship type names (strings)",
+      "sources": "Array of data source definitions with id, name, type, status"
+    },
+    "example_entity_types": {
+      "energy_outage": ["Outage", "Asset", "Crew", "Obstacle", "Feeder", "Customer", "RootCause"],
+      "cybersecurity": ["ThreatActor", "CVE", "Technique", "Malware", "Campaign", "Asset", "Indicator"],
+      "supply_chain": ["Shipment", "Port", "Vessel", "Supplier", "Component", "Factory", "Disruption", "Route"],
+      "healthcare": ["Patient", "Diagnosis", "Medication", "Procedure", "Claim", "Provider", "Interaction"],
+      "financial": ["Account", "Transaction", "Merchant", "Person", "SanctionedEntity", "Device", "Alert"]
+    },
+    "example_relation_types": {
+      "energy_outage": ["CAUSED_BY", "ASSIGNED_TO", "BLOCKING_ACCESS", "FEEDS", "AFFECTS_CUSTOMER", "CONNECTED_TO", "DELAYS_ETA", "EVIDENCED_BY", "SERVES"],
+      "cybersecurity": ["EXPLOITS", "USES_TECHNIQUE", "DEPLOYS_MALWARE", "CHAINS_TO", "AFFECTS_ASSET", "ATTRIBUTED_TO", "MITIGATED_BY", "COMMUNICATES_WITH"],
+      "supply_chain": ["ROUTED_THROUGH", "SUPPLIED_BY", "DELAYED_BY", "ALTERNATIVE_ROUTE", "DEPENDS_ON", "MANUFACTURED_AT", "SHIPS_VIA"],
+      "healthcare": ["PRESCRIBED_FOR", "CONTRAINDICATED_WITH", "COVERED_BY", "PERFORMED_BY", "DIAGNOSED_WITH", "DENIED_BECAUSE"],
+      "financial": ["SENT_TO", "RECEIVED_FROM", "OWNED_BY", "FLAGGED_BY", "CONNECTED_DEVICE", "SAME_BENEFICIARY", "SANCTIONED_MATCH"]
+    }
+  },
+  "connector_types": [
+    { "type": "S3", "description": "Amazon S3 bucket — documents, PDFs, images, JSON", "config": { "bucket_uri": "s3://your-bucket/path/", "file_types": ["pdf", "json", "csv", "txt", "jpg", "png"], "sync_interval": "5m | 15m | 1h | daily" } },
+    { "type": "API", "description": "REST API endpoint — real-time or scheduled polling", "config": { "endpoint": "https://your-api/v2/events", "auth_type": "api_key | oauth2 | iam", "poll_interval": "real-time | 1m | 5m | 15m" } },
+    { "type": "CSV", "description": "Structured data files — CSV, Excel, Parquet", "config": { "file_path": "s3://bucket/data.csv or upload", "delimiter": ",", "header_row": true, "entity_mapping": "column_name → entity_type" } },
+    { "type": "IoT/SCADA", "description": "Streaming sensor/telemetry data", "config": { "protocol": "MQTT | OPC-UA | Modbus", "topic": "sensors/temperature/#", "threshold_alerts": true } },
+    { "type": "Image/Video", "description": "Visual data for AI analysis (drones, cameras, GIS)", "config": { "source": "S3 bucket or real-time feed", "ai_model": "Claude Vision (Bedrock)", "analysis_type": "damage_assessment | object_detection | change_detection" } }
+  ]
+}

@@ -1,0 +1,309 @@
+@prefix ots:  <https://contextforge.io/ontology/ot-security#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+# ── Ontology declaration ──────────────────────────────────────────────────────
+# COA derives the ontology id from this owl:Ontology subject when the caller does
+# not pass `ontologyId`. Declaring it explicitly keeps the IRI stable across
+# reinstalls instead of getting a random urn:ontology:upload-<hex> each time.
+
+<https://contextforge.io/ontology/ot-security>
+    a owl:Ontology ;
+    dcterms:title "ContextForge OT Security Ontology" ;
+    dcterms:description """Operational-technology security domain model: threat groups,
+        ICS techniques, vulnerabilities, OT assets, Purdue zoning, and compliance
+        controls. Designed to answer reachability and blast-radius questions by
+        reasoning over asset connectivity rather than by application-side traversal.""" ;
+    owl:versionInfo "1.0.0" .
+
+# ── Core classes ──────────────────────────────────────────────────────────────
+
+ots:OTAsset a owl:Class ;
+    rdfs:label "OT Asset" ;
+    rdfs:comment "Any device on the operational-technology network." ;
+    skos:altLabel "industrial asset", "ICS device" .
+
+ots:PLC a owl:Class ;
+    rdfs:subClassOf ots:OTAsset ;
+    rdfs:label "Programmable Logic Controller" ;
+    skos:altLabel "PLC", "controller" .
+
+ots:HMI a owl:Class ;
+    rdfs:subClassOf ots:OTAsset ;
+    rdfs:label "Human Machine Interface" ;
+    skos:altLabel "HMI", "operator panel" .
+
+ots:Historian a owl:Class ;
+    rdfs:subClassOf ots:OTAsset ;
+    rdfs:label "Process Historian" .
+
+ots:EngineeringWorkstation a owl:Class ;
+    rdfs:subClassOf ots:OTAsset ;
+    rdfs:label "Engineering Workstation" ;
+    skos:altLabel "EWS" .
+
+ots:SafetyInstrumentedSystem a owl:Class ;
+    rdfs:subClassOf ots:OTAsset ;
+    rdfs:label "Safety Instrumented System" ;
+    rdfs:comment "Safety-critical controller. Compromise here has physical consequences." ;
+    skos:altLabel "SIS" .
+
+ots:NetworkDevice a owl:Class ;
+    rdfs:subClassOf ots:OTAsset ;
+    rdfs:label "Network Device" ;
+    rdfs:comment "Firewall, switch, router, or remote-access concentrator (e.g. VPN)." .
+
+ots:PurdueZone a owl:Class ;
+    rdfs:label "Purdue Zone" ;
+    rdfs:comment """A level in the Purdue Enterprise Reference Architecture.
+        Level 0 field devices through Level 5 enterprise network.""" ;
+    skos:altLabel "Purdue level", "network zone" .
+
+ots:ThreatGroup a owl:Class ;
+    rdfs:label "Threat Group" ;
+    rdfs:comment "A tracked adversary, e.g. VOLTZITE, KAMACITE, ELECTRUM." ;
+    skos:altLabel "threat actor", "adversary", "APT group" .
+
+ots:Vulnerability a owl:Class ;
+    rdfs:label "Vulnerability" ;
+    rdfs:comment "A specific weakness, usually identified by CVE." ;
+    skos:altLabel "CVE", "weakness", "flaw" .
+
+ots:ICSTechnique a owl:Class ;
+    rdfs:label "ICS Technique" ;
+    rdfs:comment "A MITRE ATT&CK for ICS technique." ;
+    skos:altLabel "ATT&CK technique", "TTP" .
+
+ots:Malware a owl:Class ;
+    rdfs:label "Malware" ;
+    rdfs:comment "ICS-capable malware, e.g. PIPEDREAM, INDUSTROYER2." .
+
+ots:Campaign a owl:Class ;
+    rdfs:label "Campaign" ;
+    rdfs:comment "A time-bounded set of intrusion activity attributed to a threat group." .
+
+ots:ComplianceControl a owl:Class ;
+    rdfs:label "Compliance Control" ;
+    rdfs:comment "A control from a regulatory framework, e.g. NERC CIP-007-6 R2." ;
+    skos:altLabel "control", "requirement" .
+
+ots:Mitigation a owl:Class ;
+    rdfs:label "Mitigation" ;
+    rdfs:comment "A compensating control or remediation for a vulnerability." .
+
+# ── Object properties ─────────────────────────────────────────────────────────
+
+ots:exploits a owl:ObjectProperty ;
+    rdfs:label "exploits" ;
+    rdfs:domain ots:ThreatGroup ;
+    rdfs:range ots:Vulnerability ;
+    rdfs:comment "The threat group is known to exploit this vulnerability." .
+
+ots:affectsAsset a owl:ObjectProperty ;
+    rdfs:label "affects asset" ;
+    rdfs:domain ots:Vulnerability ;
+    rdfs:range ots:OTAsset .
+
+ots:residesIn a owl:ObjectProperty ;
+    rdfs:label "resides in" ;
+    rdfs:domain ots:OTAsset ;
+    rdfs:range ots:PurdueZone ;
+    rdfs:comment "Which Purdue zone the asset sits in." .
+
+# canReach is transitive on purpose. This is what turns blast radius into a
+# reasoning question: assert only direct connectivity in the data, and the
+# reasoner derives the full reachable set. Without owl:TransitiveProperty this
+# collapses back into application-side BFS, which is exactly what ContextForge's
+# client-side graph-engine.ts did and what this pack replaces.
+ots:canReach a owl:ObjectProperty, owl:TransitiveProperty ;
+    rdfs:label "can reach" ;
+    rdfs:domain ots:OTAsset ;
+    rdfs:range ots:OTAsset ;
+    rdfs:comment """Network reachability from one asset to another. Transitive:
+        if A canReach B and B canReach C then A canReach C.""" .
+
+ots:directlyConnectedTo a owl:ObjectProperty, owl:SymmetricProperty ;
+    rdfs:subPropertyOf ots:canReach ;
+    rdfs:label "directly connected to" ;
+    rdfs:domain ots:OTAsset ;
+    rdfs:range ots:OTAsset ;
+    rdfs:comment """Layer-2/3 adjacency. Symmetric, and a sub-property of canReach
+        so direct links feed the transitive reachability closure.""" .
+
+ots:usesTechnique a owl:ObjectProperty ;
+    rdfs:label "uses technique" ;
+    rdfs:domain ots:ThreatGroup ;
+    rdfs:range ots:ICSTechnique .
+
+ots:deploysMalware a owl:ObjectProperty ;
+    rdfs:label "deploys malware" ;
+    rdfs:domain ots:ThreatGroup ;
+    rdfs:range ots:Malware .
+
+ots:targetsAsset a owl:ObjectProperty ;
+    rdfs:label "targets asset" ;
+    rdfs:domain ots:Malware ;
+    rdfs:range ots:OTAsset .
+
+ots:enablesTechnique a owl:ObjectProperty ;
+    rdfs:label "enables technique" ;
+    rdfs:domain ots:Vulnerability ;
+    rdfs:range ots:ICSTechnique ;
+    rdfs:comment "Exploiting this vulnerability enables this ATT&CK technique." .
+
+ots:subjectTo a owl:ObjectProperty ;
+    rdfs:label "subject to" ;
+    rdfs:domain ots:OTAsset ;
+    rdfs:range ots:ComplianceControl ;
+    rdfs:comment "The asset is in scope for this compliance control." .
+
+ots:mitigatedBy a owl:ObjectProperty ;
+    rdfs:label "mitigated by" ;
+    rdfs:domain ots:Vulnerability ;
+    rdfs:range ots:Mitigation .
+
+ots:partOfCampaign a owl:ObjectProperty ;
+    rdfs:label "part of campaign" ;
+    rdfs:domain ots:ICSTechnique ;
+    rdfs:range ots:Campaign .
+
+ots:attributedTo a owl:ObjectProperty ;
+    rdfs:label "attributed to" ;
+    rdfs:domain ots:Campaign ;
+    rdfs:range ots:ThreatGroup ;
+    owl:inverseOf ots:conductedCampaign .
+
+ots:conductedCampaign a owl:ObjectProperty ;
+    rdfs:label "conducted campaign" ;
+    rdfs:domain ots:ThreatGroup ;
+    rdfs:range ots:Campaign .
+
+ots:adjacentZone a owl:ObjectProperty, owl:SymmetricProperty ;
+    rdfs:label "adjacent zone" ;
+    rdfs:domain ots:PurdueZone ;
+    rdfs:range ots:PurdueZone ;
+    rdfs:comment "Zones with a permitted traffic path between them." .
+
+# ── Datatype properties ───────────────────────────────────────────────────────
+
+ots:purdueLevel a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "Purdue level" ;
+    rdfs:domain ots:PurdueZone ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "0 through 5. Lower is closer to physical process." .
+
+ots:cveId a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "CVE ID" ;
+    rdfs:domain ots:Vulnerability ;
+    rdfs:range xsd:string .
+
+ots:cvssScore a owl:DatatypeProperty ;
+    rdfs:label "CVSS score" ;
+    rdfs:domain ots:Vulnerability ;
+    rdfs:range xsd:decimal .
+
+ots:exploitedInWild a owl:DatatypeProperty ;
+    rdfs:label "exploited in the wild" ;
+    rdfs:domain ots:Vulnerability ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment "True when present in CISA's Known Exploited Vulnerabilities catalog." .
+
+ots:patchAvailable a owl:DatatypeProperty ;
+    rdfs:label "patch available" ;
+    rdfs:domain ots:Vulnerability ;
+    rdfs:range xsd:boolean .
+
+ots:assetTag a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "asset tag" ;
+    rdfs:domain ots:OTAsset ;
+    rdfs:range xsd:string .
+
+ots:vendor a owl:DatatypeProperty ;
+    rdfs:label "vendor" ;
+    rdfs:domain ots:OTAsset ;
+    rdfs:range xsd:string .
+
+ots:model a owl:DatatypeProperty ;
+    rdfs:label "model" ;
+    rdfs:domain ots:OTAsset ;
+    rdfs:range xsd:string .
+
+ots:firmwareVersion a owl:DatatypeProperty ;
+    rdfs:label "firmware version" ;
+    rdfs:domain ots:OTAsset ;
+    rdfs:range xsd:string .
+
+ots:lastPatched a owl:DatatypeProperty ;
+    rdfs:label "last patched" ;
+    rdfs:domain ots:OTAsset ;
+    rdfs:range xsd:date .
+
+ots:safetyCritical a owl:DatatypeProperty ;
+    rdfs:label "safety critical" ;
+    rdfs:domain ots:OTAsset ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment "True when loss of this asset has a physical safety consequence." .
+
+ots:attackId a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "ATT&CK ID" ;
+    rdfs:domain ots:ICSTechnique ;
+    rdfs:range xsd:string ;
+    rdfs:comment "MITRE ATT&CK for ICS technique id, e.g. T0836." .
+
+ots:controlId a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "control ID" ;
+    rdfs:domain ots:ComplianceControl ;
+    rdfs:range xsd:string ;
+    rdfs:comment "e.g. CIP-007-6 R2.1" .
+
+ots:framework a owl:DatatypeProperty ;
+    rdfs:label "framework" ;
+    rdfs:domain ots:ComplianceControl ;
+    rdfs:range xsd:string ;
+    rdfs:comment "e.g. NERC CIP, IEC 62443, NIST SP 800-82." .
+
+ots:groupName a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "group name" ;
+    rdfs:domain ots:ThreatGroup ;
+    rdfs:range xsd:string .
+
+# ── Purdue zone individuals ───────────────────────────────────────────────────
+# Fixed vocabulary, so declared here rather than left to per-customer data.
+
+ots:Level0 a ots:PurdueZone ;
+    rdfs:label "Level 0 — Process" ;
+    ots:purdueLevel 0 ;
+    ots:adjacentZone ots:Level1 .
+
+ots:Level1 a ots:PurdueZone ;
+    rdfs:label "Level 1 — Basic Control" ;
+    ots:purdueLevel 1 ;
+    ots:adjacentZone ots:Level2 .
+
+ots:Level2 a ots:PurdueZone ;
+    rdfs:label "Level 2 — Area Supervisory Control" ;
+    ots:purdueLevel 2 ;
+    ots:adjacentZone ots:Level3 .
+
+ots:Level3 a ots:PurdueZone ;
+    rdfs:label "Level 3 — Site Operations" ;
+    ots:purdueLevel 3 ;
+    ots:adjacentZone ots:Level35 .
+
+ots:Level35 a ots:PurdueZone ;
+    rdfs:label "Level 3.5 — Industrial DMZ" ;
+    ots:purdueLevel 3 ;
+    rdfs:comment "The IDMZ. The control boundary between OT and IT." ;
+    ots:adjacentZone ots:Level4 .
+
+ots:Level4 a ots:PurdueZone ;
+    rdfs:label "Level 4 — Site Business Planning" ;
+    ots:purdueLevel 4 ;
+    ots:adjacentZone ots:Level5 .
+
+ots:Level5 a ots:PurdueZone ;
+    rdfs:label "Level 5 — Enterprise" ;
+    ots:purdueLevel 5 .

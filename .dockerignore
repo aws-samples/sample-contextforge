@@ -1,0 +1,33 @@
+# Keep the build context small and secret-free.
+node_modules
+.next
+out
+build
+
+# The 2.1 GB COA submodule is reference-only; the app calls COA over HTTP.
+third_party
+
+# Infra (CDK) and its build output — not part of the app image.
+infra
+connectors
+tools
+
+# Local env / secrets — never ship into the image.
+.env
+.env.local
+.env.*.local
+
+# Git + editor + OS junk
+.git
+.gitignore
+.vscode
+**/.DS_Store
+
+# Local SQLite artifacts (the image reseeds its own DB during build)
+contextforge.db-shm
+contextforge.db-wal
+
+# Docs, presentation, misc
+docs
+*.md
+!README.md
