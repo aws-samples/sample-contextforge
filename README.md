@@ -10,6 +10,14 @@ between a complaint and a root cause.
 Clone it, run it in your own AWS account, pick your model, ask across all your
 sources.
 
+> **Sample code — not production-ready.** ContextForge is a demonstration
+> sample. It ships with demo-grade defaults (e.g. the local login is
+> unauthenticated by default, sample data is synthetic) and is intended for
+> learning and evaluation, not production use. Review and harden authentication,
+> authorization, secrets management, logging, and data handling for your own
+> environment before any production deployment. See [`docs/SETUP.md`](docs/SETUP.md)
+> for locking down the login gate and configuring real credentials.
+
 ## Quick start (no AWS needed)
 
 ```bash
